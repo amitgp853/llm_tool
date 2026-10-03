@@ -6,7 +6,7 @@ resolution: workspace
 # repository: https://github.com/my_org/my_repo
 
 environment:
-  sdk: ^3.13.4
+  sdk: ^3.11.0
 
 # Add regular dependencies here.
 dependencies:
@@ -15,6 +15,6 @@ dependencies:
 
 dev_dependencies:
   lints: ^6.0.0
-  test: ^1.25.6
-  build_runner: any
+  test: ^1.32.0
+  build_runner: ^2.16.0
   llm_tool_calling_generator: ^0.1.0

@@ -1,6 +1,6 @@
 builders:
   llm_tool_calling:
-    import: "package:llm_tool_calling_generator/builder.dart"
+    import: "package:llm_tool_calling_generator/llm_tool_calling_generator.dart"
     builder_factories: ["toolBuilder"]
     build_extensions: {".dart": [".llm_tool_calling.g.part"]}
     auto_apply: dependents

@@ -2,20 +2,26 @@ name: llm_tool_calling_generator
 description: Code generator for llm_tool_calling. Turns @Tool-annotated Dart functions into LLM tool definitions with JSON schemas.
 version: 0.1.0
 repository: https://github.com/amitgp853/llm_tool_calling/tree/main/llm_tool_calling_generator
+issue_tracker: https://github.com/amitgp853/llm_tool_calling/issues
+topics:
+  - llm
+  - tool-calling
+  - function-calling
+  - ai-agents
+  - codegen
 resolution: workspace
 
 environment:
-  sdk: ^3.13.4
+  sdk: ^3.11.0
 
-# Add regular dependencies here.
 dependencies:
+  analyzer: ^14.0.0
+  build: ^4.0.10
   llm_tool_calling: ^0.1.0
-  analyzer: any
-  build: any
-  source_gen: any
+  source_gen: ^4.2.4
 
 dev_dependencies:
-  build_test: ^3.5.20
+  build_test: ^3.5.0
   glob: ^2.2.0
   lints: ^6.0.0
-  test: ^1.25.6
+  test: ^1.32.0

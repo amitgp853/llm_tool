@@ -1,13 +1,31 @@
+import 'dart:io';
+
 import 'package:analyzer/dart/analysis/results.dart';
 import 'package:analyzer/diagnostic/diagnostic.dart';
 import 'package:build/build.dart';
 import 'package:build_test/build_test.dart';
 import 'package:glob/glob.dart';
-import 'package:llm_tool_calling_generator/builder.dart';
+import 'package:llm_tool_calling_generator/llm_tool_calling_generator.dart';
 import 'package:test/test.dart';
 
 void main() {
   setUpAll(_loadRuntimeSources);
+
+  test('example/example.g.dart matches the generator output', () async {
+    // If this fails, regenerate the example's .g.dart (see the comment at
+    // the top of example/example.dart) and commit it.
+    final source = File('example/example.dart').readAsStringSync();
+    final result = await _build(source, path: 'lib/example.dart');
+    final part = result.readerWriter.testing.readString(
+      AssetId('a', 'lib/example.llm_tool_calling.g.part'),
+    );
+    expect(
+      File('example/example.g.dart').readAsStringSync(),
+      "// GENERATED CODE - DO NOT MODIFY BY HAND\n\n"
+      "part of 'example.dart';\n\n"
+      '$part',
+    );
+  });
 
   group('schema', () {
     test('matches the full expected output for a typical tool', () async {
@@ -538,11 +556,14 @@ part 'tools.g.dart';
 
 ''';
 
-Future<TestBuilderResult> _build(String source) => testBuilder(
+Future<TestBuilderResult> _build(
+  String source, {
+  String path = 'lib/tools.dart',
+}) => testBuilder(
   toolBuilder(BuilderOptions.empty),
-  {..._runtimeSources, 'a|lib/tools.dart': source},
+  {..._runtimeSources, 'a|$path': source},
   rootPackage: 'a',
-  generateFor: {'a|lib/tools.dart'},
+  generateFor: {'a|$path'},
   flattenOutput: true,
 );
 
@@ -582,9 +603,9 @@ Future<List<String>> _compileErrors(String source, String generated) =>
         final library = await resolver.libraryFor(
           AssetId('a', 'lib/tools.dart'),
         );
-        final resolved = await library.session.getResolvedLibraryByElement(
-          library,
-        ) as ResolvedLibraryResult;
+        final resolved =
+            await library.session.getResolvedLibraryByElement(library)
+                as ResolvedLibraryResult;
         return [
           for (final unit in resolved.units)
             for (final diagnostic in unit.diagnostics)
