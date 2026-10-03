@@ -1,8 +1,8 @@
 name: llm_tool_calling_generator
-description: A starting point for Dart libraries or applications.
+description: Code generator for llm_tool_calling. Turns @Tool-annotated Dart functions into LLM tool definitions with JSON schemas.
 version: 0.1.0
+repository: https://github.com/amitgp853/llm_tool_calling/tree/main/llm_tool_calling_generator
 resolution: workspace
-# repository: https://github.com/my_org/my_repo
 
 environment:
   sdk: ^3.13.4
