@@ -1,3 +1,8 @@
+## Unreleased
+
+- `validateArguments()` checks `enum` lists and reports the allowed values,
+  e.g. `unit must be one of "celsius", "fahrenheit", got "kelvin"`.
+
 ## 0.1.0
 
 - Initial release.

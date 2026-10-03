@@ -8,3 +8,24 @@ String getWeather(
   @Param('City name, e.g. Kanpur') String city, {
   @Param('Use Celsius instead of Fahrenheit') bool celsius = true,
 }) => 'Sunny, ${celsius ? '31°C' : '88°F'} in $city';
+
+enum TemperatureUnit { celsius, fahrenheit, kelvin }
+
+/// Converts a temperature between units.
+@Tool()
+double convertTemperature(
+  @Param('The temperature to convert') double value,
+  @Param('Unit to convert from') TemperatureUnit from, {
+  @Param('Unit to convert to') TemperatureUnit to = TemperatureUnit.celsius,
+}) {
+  final celsius = switch (from) {
+    TemperatureUnit.celsius => value,
+    TemperatureUnit.fahrenheit => (value - 32) * 5 / 9,
+    TemperatureUnit.kelvin => value - 273.15,
+  };
+  return switch (to) {
+    TemperatureUnit.celsius => celsius,
+    TemperatureUnit.fahrenheit => celsius * 9 / 5 + 32,
+    TemperatureUnit.kelvin => celsius + 273.15,
+  };
+}

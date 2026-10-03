@@ -86,6 +86,55 @@ void main() {
       });
     });
 
+    group('enum', () {
+      final unitSchema = {
+        'type': 'object',
+        'properties': {
+          'unit': {
+            'type': 'string',
+            'enum': ['celsius', 'fahrenheit'],
+          },
+        },
+      };
+
+      test('accepts a listed value', () {
+        expect(validateArguments(unitSchema, {'unit': 'celsius'}), isEmpty);
+      });
+
+      test('rejects an unlisted value and lists the allowed ones', () {
+        expect(validateArguments(unitSchema, {'unit': 'kelvin'}), [
+          'unit must be one of "celsius", "fahrenheit", got "kelvin"',
+        ]);
+      });
+
+      test('is case-sensitive', () {
+        expect(validateArguments(unitSchema, {'unit': 'Celsius'}), [
+          'unit must be one of "celsius", "fahrenheit", got "Celsius"',
+        ]);
+      });
+
+      test('wrong type reports the type error only', () {
+        expect(validateArguments(unitSchema, {'unit': 1}), [
+          'unit must be a string, got integer',
+        ]);
+      });
+
+      test('enum without a type still works', () {
+        final schema = {
+          'type': 'object',
+          'properties': {
+            'level': {
+              'enum': [1, 2, 3],
+            },
+          },
+        };
+        expect(validateArguments(schema, {'level': 2}), isEmpty);
+        expect(validateArguments(schema, {'level': 4}), [
+          'level must be one of 1, 2, 3, got 4',
+        ]);
+      });
+    });
+
     test('malformed property schema does not crash', () {
       final badSchema = {
         'type': 'object',

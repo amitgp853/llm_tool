@@ -232,6 +232,133 @@ void f(num x) {}
     });
   });
 
+  group('enums', () {
+    const unitEnum = 'enum Unit { celsius, fahrenheit }\n\n';
+
+    test('become a string schema listing the value names', () async {
+      final output = await _generate('''
+$unitEnum/// Doc.
+@Tool()
+void f(Unit unit) {}
+''');
+      expect(
+        output,
+        contains(
+          '"unit": {\n        "type": "string",\n'
+          '        "enum": ["celsius", "fahrenheit"],\n      }',
+        ),
+      );
+      expect(output, contains('"required": ["unit"]'));
+      expect(output, contains('f(Unit.values.byName(args["unit"] as String))'));
+    });
+
+    test('description comes after the enum values', () async {
+      final output = await _generate('''
+$unitEnum/// Doc.
+@Tool()
+void f(@Param('Temperature unit') Unit unit) {}
+''');
+      expect(output, contains('"description": "Temperature unit"'));
+    });
+
+    test('nullable enum is optional and stays null when missing', () async {
+      final output = await _generate('''
+$unitEnum/// Doc.
+@Tool()
+void f({Unit? unit}) {}
+''');
+      expect(output, contains('"required": []'));
+      expect(
+        _withoutSpaces(output),
+        contains(
+          'unit:(args["unit"]==null?null:Unit.values.byName(args["unit"]asString))',
+        ),
+      );
+    });
+
+    test('enum with a default value uses the default when missing', () async {
+      final output = await _generate('''
+$unitEnum/// Doc.
+@Tool()
+void f({Unit unit = Unit.celsius}) {}
+''');
+      expect(output, contains('"required": []'));
+      // The default must apply to the whole conditional, not just its else.
+      expect(_withoutSpaces(output), contains('asString))??Unit.celsius'));
+    });
+
+    test('enhanced enum uses value names only', () async {
+      final output = await _generate('''
+enum Size {
+  small(1),
+  large(10);
+
+  const Size(this.weight);
+  final int weight;
+}
+
+/// Doc.
+@Tool()
+void f(Size size) {}
+''');
+      expect(output, contains('"enum": ["small", "large"]'));
+    });
+
+    group('imported from another file', () {
+      const units = {'a|lib/units.dart': 'enum Unit { celsius, fahrenheit }'};
+      const tool = '/// Doc.\n@Tool()\nvoid f(u.Unit unit) {}\n';
+
+      test('without a prefix', () async {
+        final output = await _generate(
+          '/// Doc.\n@Tool()\nvoid f(Unit unit) {}\n',
+          extraSources: units,
+          header:
+              "import 'package:llm_tool_calling/llm_tool_calling.dart';\n"
+              "import 'units.dart';\n\n"
+              "part 'tools.g.dart';\n\n",
+        );
+        expect(output, contains('Unit.values.byName('));
+        expect(output, isNot(contains('u.Unit')));
+      });
+
+      test('with a prefix, the generated code uses the prefix', () async {
+        final output = await _generate(
+          tool,
+          extraSources: units,
+          header:
+              "import 'package:llm_tool_calling/llm_tool_calling.dart';\n"
+              "import 'units.dart' as u;\n\n"
+              "part 'tools.g.dart';\n\n",
+        );
+        expect(output, contains('u.Unit.values.byName('));
+      });
+
+      test('imported both ways, the unprefixed name wins', () async {
+        final output = await _generate(
+          tool,
+          extraSources: units,
+          header:
+              "import 'package:llm_tool_calling/llm_tool_calling.dart';\n"
+              "import 'units.dart' as u;\n"
+              "import 'units.dart';\n\n"
+              "part 'tools.g.dart';\n\n",
+        );
+        expect(output, contains('f(Unit.values.byName('));
+      });
+    });
+
+    test('private enum works', () async {
+      final output = await _generate('''
+enum _Mode { fast, safe }
+
+/// Doc.
+@Tool()
+void f(_Mode mode) {}
+''');
+      expect(output, contains('_Mode.values.byName('));
+    });
+  });
+
   group('return types', () {
     test('void function returns null', () async {
       final output = await _generate('''
@@ -559,9 +686,10 @@ part 'tools.g.dart';
 Future<TestBuilderResult> _build(
   String source, {
   String path = 'lib/tools.dart',
+  Map<String, String> extraSources = const {},
 }) => testBuilder(
   toolBuilder(BuilderOptions.empty),
-  {..._runtimeSources, 'a|$path': source},
+  {..._runtimeSources, ...extraSources, 'a|$path': source},
   rootPackage: 'a',
   generateFor: {'a|$path'},
   flattenOutput: true,
@@ -571,16 +699,27 @@ Future<TestBuilderResult> _build(
 ///
 /// Also checks that the generated code compiles, because text checks alone
 /// can't catch a wrong cast or a type error.
-Future<String> _generate(String tools) async {
-  final source = '$_header$tools';
-  final result = await _build(source);
+///
+/// [extraSources] are more files, e.g. `{'a|lib/units.dart': '...'}`, and
+/// [header] replaces the default imports and `part` directive.
+Future<String> _generate(
+  String tools, {
+  Map<String, String> extraSources = const {},
+  String header = _header,
+}) async {
+  final source = '$header$tools';
+  final result = await _build(source, extraSources: extraSources);
   expect(result.errors, isEmpty);
   expect(result.succeeded, isTrue);
 
   final output = result.readerWriter.testing.readString(
     AssetId('a', 'lib/tools.llm_tool_calling.g.part'),
   );
-  expect(await _compileErrors(source, output), isEmpty, reason: output);
+  expect(
+    await _compileErrors(source, output, extraSources),
+    isEmpty,
+    reason: output,
+  );
   return output;
 }
 
@@ -592,26 +731,31 @@ Future<String> _buildErrors(String tools) async {
 }
 
 /// Analyzer errors for [source] combined with its [generated] part.
-Future<List<String>> _compileErrors(String source, String generated) =>
-    resolveSources(
-      {
-        ..._runtimeSources,
-        'a|lib/tools.dart': source,
-        'a|lib/tools.g.dart': "part of 'tools.dart';\n$generated",
-      },
-      (resolver) async {
-        final library = await resolver.libraryFor(
-          AssetId('a', 'lib/tools.dart'),
-        );
-        final resolved =
-            await library.session.getResolvedLibraryByElement(library)
-                as ResolvedLibraryResult;
-        return [
-          for (final unit in resolved.units)
-            for (final diagnostic in unit.diagnostics)
-              if (diagnostic.severity == Severity.error) diagnostic.message,
-        ];
-      },
-      rootPackage: 'a',
-      resolverFor: 'a|lib/tools.dart',
-    );
+Future<List<String>> _compileErrors(
+  String source,
+  String generated,
+  Map<String, String> extraSources,
+) => resolveSources(
+  {
+    ..._runtimeSources,
+    ...extraSources,
+    'a|lib/tools.dart': source,
+    'a|lib/tools.g.dart': "part of 'tools.dart';\n$generated",
+  },
+  (resolver) async {
+    final library = await resolver.libraryFor(AssetId('a', 'lib/tools.dart'));
+    final resolved =
+        await library.session.getResolvedLibraryByElement(library)
+            as ResolvedLibraryResult;
+    return [
+      for (final unit in resolved.units)
+        for (final diagnostic in unit.diagnostics)
+          if (diagnostic.severity == Severity.error) diagnostic.message,
+    ];
+  },
+  rootPackage: 'a',
+  resolverFor: 'a|lib/tools.dart',
+);
+
+/// [code] with all whitespace removed, so checks don't depend on formatting.
+String _withoutSpaces(String code) => code.replaceAll(RegExp(r'\s+'), '');

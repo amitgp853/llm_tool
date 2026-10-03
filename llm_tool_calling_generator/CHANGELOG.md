@@ -1,3 +1,9 @@
+## Unreleased
+
+- Enum parameters, sent to the LLM as their value names. Works with
+  nullable enums, defaults, enhanced enums and prefixed imports
+  (`import 'units.dart' as u;`).
+
 ## 0.1.0
 
 - Initial release.

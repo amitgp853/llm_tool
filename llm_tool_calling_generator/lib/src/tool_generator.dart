@@ -99,17 +99,18 @@ class ToolGenerator extends GeneratorForAnnotation<Tool> {
 
     for (final param in element.formalParameters) {
       final name = param.displayName;
-      final jsonType = _jsonType(param.type);
-      if (jsonType == null) {
+      final typeSchema = _typeSchema(param.type);
+      if (typeSchema == null) {
         throw InvalidGenerationSource(
           'Parameter "$name" has type ${param.type.getDisplayString()}, '
-          'which is not supported yet. Use String, int, double, num or bool.',
+          'which is not supported yet. Use String, int, double, num, bool '
+          'or an enum.',
           element: param,
         );
       }
 
       final paramDescription = _paramDescription(param);
-      properties[name] = {'type': jsonType, 'description': ?paramDescription};
+      properties[name] = {...typeSchema, 'description': ?paramDescription};
 
       // Required in the schema = no default value and can't be null.
       final isNullable =
@@ -117,7 +118,12 @@ class ToolGenerator extends GeneratorForAnnotation<Tool> {
       final isRequired = !param.hasDefaultValue && !isNullable;
       if (isRequired) required.add(name);
 
-      var value = _readArg(name, param.type, nullable: !isRequired);
+      var value = _readArg(
+        name,
+        param.type,
+        nullable: !isRequired,
+        library: element.library,
+      );
       if (param.hasDefaultValue) {
         value = '$value ?? ${param.defaultValueCode}';
       }
@@ -155,23 +161,63 @@ final ${functionName}Tool = ToolDefinition(
   }
 }
 
-/// Maps a Dart type to its JSON Schema type, or null if unsupported.
-String? _jsonType(DartType type) {
-  if (type.isDartCoreString) return 'string';
-  if (type.isDartCoreInt) return 'integer';
-  if (type.isDartCoreDouble || type.isDartCoreNum) return 'number';
-  if (type.isDartCoreBool) return 'boolean';
+/// The JSON Schema for a Dart type (without description), or null if the
+/// type is unsupported.
+Map<String, Object?>? _typeSchema(DartType type) {
+  if (type.isDartCoreString) return {'type': 'string'};
+  if (type.isDartCoreInt) return {'type': 'integer'};
+  if (type.isDartCoreDouble || type.isDartCoreNum) return {'type': 'number'};
+  if (type.isDartCoreBool) return {'type': 'boolean'};
+  if (_enumOf(type) case final enumElement?) {
+    // Enums travel as their value names, e.g. "celsius".
+    return {
+      'type': 'string',
+      'enum': [for (final value in enumElement.constants) value.displayName],
+    };
+  }
   return null;
 }
 
+EnumElement? _enumOf(DartType type) => switch (type) {
+  InterfaceType(element: final EnumElement element) => element,
+  _ => null,
+};
+
+/// How code in [library] (and so in its generated part) refers to [element]:
+/// `Unit`, or `u.Unit` when it is only imported with `as u`.
+String _referenceTo(Element element, LibraryElement library) {
+  final name = element.displayName;
+  if (element.library == library) return name;
+
+  String? prefixed;
+  for (final import in library.firstFragment.libraryImports) {
+    if (import.importedLibrary?.exportNamespace.get2(name) != element) continue;
+    final prefix = import.prefix?.element.displayName;
+    if (prefix == null) return name; // an unprefixed import wins
+    prefixed ??= '$prefix.$name';
+  }
+  return prefixed ?? name;
+}
+
 /// Code that reads one argument from the AI's map and casts it.
-String _readArg(String name, DartType type, {required bool nullable}) {
+String _readArg(
+  String name,
+  DartType type, {
+  required bool nullable,
+  required LibraryElement library,
+}) {
   final q = nullable ? '?' : '';
   final value = 'args[${_literal(name)}]';
   // JSON has no int/double difference: 5 can arrive as int and 5.0 as
   // double, so read as num and convert.
   if (type.isDartCoreDouble) return '($value as num$q)$q.toDouble()';
   if (type.isDartCoreInt) return '($value as num$q)$q.toInt()';
+  if (_enumOf(type) case final enumElement?) {
+    final byName = '${_referenceTo(enumElement, library)}.values.byName';
+    if (!nullable) return '$byName($value as String)';
+    // Parenthesized so a following `?? default` applies to the whole thing.
+    return '($value == null ? null : $byName($value as String))';
+  }
   final typeName = type.getDisplayString().replaceAll('?', '');
   return '$value as $typeName$q';
 }

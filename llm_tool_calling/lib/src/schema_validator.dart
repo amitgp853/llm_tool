@@ -31,10 +31,22 @@ List<String> validateArguments(
         '$key must be ${_withArticle(expected)}, '
         'got ${_jsonType(value)}',
       );
+      continue;
+    }
+
+    // Only the listed values are allowed. Listing them lets the LLM fix it.
+    final allowed = property['enum'];
+    if (allowed is List && !allowed.contains(value)) {
+      errors.add(
+        '$key must be one of ${allowed.map(_quote).join(', ')}, '
+        'got ${_quote(value)}',
+      );
     }
   }
   return errors;
 }
+
+String _quote(Object? value) => value is String ? '"$value"' : '$value';
 
 bool _matchesType(Object value, String type) => switch (type) {
   'string' => value is String,

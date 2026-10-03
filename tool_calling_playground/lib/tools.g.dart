@@ -27,3 +27,36 @@ final getWeatherTool = ToolDefinition(
     celsius: args["celsius"] as bool? ?? true,
   ),
 );
+
+final convertTemperatureTool = ToolDefinition(
+  name: "convertTemperature",
+  description: "Converts a temperature between units.",
+  parametersSchema: {
+    "type": "object",
+    "properties": {
+      "value": {"type": "number", "description": "The temperature to convert"},
+      "from": {
+        "type": "string",
+        "enum": ["celsius", "fahrenheit", "kelvin"],
+        "description": "Unit to convert from",
+      },
+      "to": {
+        "type": "string",
+        "enum": ["celsius", "fahrenheit", "kelvin"],
+        "description": "Unit to convert to",
+      },
+    },
+    "required": ["value", "from"],
+    "additionalProperties": false,
+  },
+  requiresConfirmation: false,
+  execute: (args) => convertTemperature(
+    (args["value"] as num).toDouble(),
+    TemperatureUnit.values.byName(args["from"] as String),
+    to:
+        (args["to"] == null
+            ? null
+            : TemperatureUnit.values.byName(args["to"] as String)) ??
+        TemperatureUnit.celsius,
+  ),
+);

@@ -164,6 +164,7 @@ even when you set a custom `name`.
 | `double` | `"number"` | `5` is accepted and converted to `5.0`. |
 | `num` | `"number"` | |
 | `bool` | `"boolean"` | |
+| any `enum` | `"string"` with `"enum": [...]` | Sent as value names, e.g. `"celsius"`. |
 
 Parameters can be positional or named, and any of them can be nullable or
 have a default value:
@@ -177,7 +178,7 @@ have a default value:
 Functions can return anything, including `Future<T>` and `void` (`void`
 tools return `null`).
 
-`List`, enums and custom classes are not supported yet; see the
+`List` and custom classes are not supported yet; see the
 [roadmap](#roadmap). Using them is a build-time error, not a silent bug.
 
 ## Validation and errors
@@ -190,6 +191,7 @@ tools return `null`).
 | Required argument missing or `null` | `city is required` |
 | Argument not in the schema | `colour is not a known argument` |
 | Wrong JSON type | `city must be a string, got integer` |
+| Value not in an enum | `unit must be one of "celsius", "fahrenheit", got "kelvin"` |
 
 If anything is wrong, your function does not run and a
 `ToolArgumentException` is thrown. Its `toString()` is written for the LLM:
@@ -242,7 +244,7 @@ Good to know:
   contain `$`.
 
 **`Parameter "x" has type ..., which is not supported yet`**
-- Use `String`, `int`, `double`, `num` or `bool`; see
+- Use `String`, `int`, `double`, `num`, `bool` or an enum; see
   [Supported types](#supported-types).
 
 **`Conflicting outputs were detected`**
@@ -253,7 +255,7 @@ All of them write into the same shared `.g.dart` part.
 
 ## Roadmap
 
-- `List`, enum and custom class parameters (nested object schemas).
+- `List` and custom class parameters (nested object schemas).
 - A generated list of all tools in a file, e.g. `allTools`.
 - Ready-made tool objects and schemas for popular SDKs such as `llm_sdk`,
   `flutter_ai_tools` and `firebase_ai`.

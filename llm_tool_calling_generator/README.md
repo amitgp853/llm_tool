@@ -75,7 +75,7 @@ final getWeatherTool = ToolDefinition(
 ## Supported
 
 - Top-level functions: sync, async (`Future<T>`) and `void`.
-- `String`, `int`, `double`, `num` and `bool` parameters: positional or
+- `String`, `int`, `double`, `num`, `bool` and enum parameters: positional or
   named, nullable or not, with or without defaults.
 - Descriptions from `@Tool(description: ...)` or the doc comment.
 
