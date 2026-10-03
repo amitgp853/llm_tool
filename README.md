@@ -42,6 +42,10 @@ cd tool_calling_playground && dart run bin/provider_check.dart
 Publish `llm_tool_calling` before `llm_tool_calling_generator`, which depends
 on it.
 
+## Author
+
+Built and maintained by [Amit Gupta](https://github.com/amitgp853).
+
 ## License
 
 [MIT](LICENSE)

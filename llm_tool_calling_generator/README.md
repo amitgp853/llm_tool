@@ -103,3 +103,11 @@ message.
 
 More in the
 [full troubleshooting guide](https://pub.dev/packages/llm_tool_calling#troubleshooting).
+
+## Author
+
+Built and maintained by [Amit Gupta](https://github.com/amitgp853).
+Bug reports, ideas and pull requests are welcome on
+[GitHub](https://github.com/amitgp853/llm_tool_calling/issues).
+If this package saves you time, a like on pub.dev or a star on GitHub helps
+others find it.

@@ -347,12 +347,17 @@ All of them write into the same shared `.g.dart` part.
 - `llm_tool_calling_flutter`: an approval widget for
   `requiresConfirmation` tools.
 
-Ideas and bug reports are welcome on
-[GitHub](https://github.com/amitgp853/llm_tool_calling/issues).
-
 ## Packages
 
 | Package | Purpose | Add as |
 |---|---|---|
 | [`llm_tool_calling`](https://pub.dev/packages/llm_tool_calling) | Annotations, `ToolDefinition`, validation | dependency |
 | [`llm_tool_calling_generator`](https://pub.dev/packages/llm_tool_calling_generator) | The `build_runner` code generator | dev dependency |
+
+## Author
+
+Built and maintained by [Amit Gupta](https://github.com/amitgp853).
+Bug reports, ideas and pull requests are welcome on
+[GitHub](https://github.com/amitgp853/llm_tool_calling/issues).
+If this package saves you time, a like on pub.dev or a star on GitHub helps
+others find it.
