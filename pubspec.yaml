@@ -1,0 +1,10 @@
+name: llm_tool_calling_workspace
+publish_to: none
+
+environment:
+  sdk: ^3.6.0
+
+workspace:
+  - llm_tool_calling
+  - llm_tool_calling_generator
+  - tool_calling_playground
