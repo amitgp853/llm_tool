@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:analyzer/dart/element/element.dart';
@@ -12,8 +13,37 @@ final _paramChecker = TypeChecker.typeNamed(
   inPackage: 'llm_tool_calling',
 );
 
+final _toolChecker = TypeChecker.typeNamed(Tool, inPackage: 'llm_tool_calling');
+
 class ToolGenerator extends GeneratorForAnnotation<Tool> {
   ToolGenerator() : super(inPackage: 'llm_tool_calling');
+
+  /// GeneratorForAnnotation only looks at top-level declarations, so @Tool on
+  /// a method would be silently ignored. Fail loudly instead.
+  @override
+  FutureOr<String> generate(LibraryReader library, BuildStep buildStep) {
+    final lib = library.element;
+    final containers = <InstanceElement>[
+      ...lib.classes,
+      ...lib.mixins,
+      ...lib.enums,
+      ...lib.extensions,
+      ...lib.extensionTypes,
+    ];
+    for (final container in containers) {
+      for (final method in container.methods) {
+        if (_toolChecker.hasAnnotationOf(method)) {
+          throw InvalidGenerationSource(
+            '@Tool can only be used on top-level functions, but '
+            '"${container.displayName}.${method.displayName}" is a method. '
+            'Move it to a top-level function.',
+            element: method,
+          );
+        }
+      }
+    }
+    return super.generate(library, buildStep);
+  }
 
   @override
   String generateForAnnotatedElement(
