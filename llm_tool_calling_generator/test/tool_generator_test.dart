@@ -359,6 +359,115 @@ void f(_Mode mode) {}
     });
   });
 
+  group('lists', () {
+    test('List<String> becomes an array of strings', () async {
+      final output = await _generate('''
+/// Doc.
+@Tool()
+void f(@Param('Tags to add') List<String> tags) {}
+''');
+      expect(
+        _withoutSpaces(output),
+        contains(
+          '"tags":{"type":"array","items":{"type":"string"},'
+          '"description":"Tagstoadd"}',
+        ),
+      );
+      expect(output, contains('"required": ["tags"]'));
+      expect(
+        _withoutSpaces(output),
+        contains('f((args["tags"]asList).map((e)=>easString).toList())'),
+      );
+    });
+
+    test('items of every simple type are converted', () async {
+      final output = await _generate('''
+/// Doc.
+@Tool()
+void f(List<int> i, List<double> d, List<num> n, List<bool> b) {}
+''');
+      final code = _withoutSpaces(output);
+      expect(code, contains('"i":{"type":"array","items":{"type":"integer"}}'));
+      expect(code, contains('"d":{"type":"array","items":{"type":"number"}}'));
+      expect(code, contains('(e)=>(easnum).toInt()'));
+      expect(code, contains('(e)=>(easnum).toDouble()'));
+      expect(code, contains('(e)=>easnum)'));
+      expect(code, contains('(e)=>easbool)'));
+    });
+
+    test('list of enums', () async {
+      final output = await _generate('''
+enum Color { red, green }
+
+/// Doc.
+@Tool()
+void f(List<Color> colors) {}
+''');
+      final code = _withoutSpaces(output);
+      expect(
+        code,
+        contains('"items":{"type":"string","enum":["red","green"]}'),
+      );
+      expect(code, contains('(e)=>Color.values.byName(easString)'));
+    });
+
+    test('nested lists', () async {
+      final output = await _generate('''
+/// Doc.
+@Tool()
+void f(List<List<int>> grid) {}
+''');
+      final code = _withoutSpaces(output);
+      expect(
+        code,
+        contains('"items":{"type":"array","items":{"type":"integer"}}'),
+      );
+      expect(
+        code,
+        contains(
+          '(args["grid"]asList).map((e)=>(easList).map((e)=>(easnum).toInt()).toList()).toList()',
+        ),
+      );
+    });
+
+    test('nullable list is optional and stays null when missing', () async {
+      final output = await _generate('''
+/// Doc.
+@Tool()
+void f({List<String>? tags}) {}
+''');
+      expect(output, contains('"required": []'));
+      expect(
+        _withoutSpaces(output),
+        contains(
+          'tags:(args["tags"]==null?null:(args["tags"]asList).map((e)=>easString).toList())',
+        ),
+      );
+    });
+
+    test('list with a default uses it when missing', () async {
+      final output = await _generate('''
+/// Doc.
+@Tool()
+void f({List<String> tags = const ['a']}) {}
+''');
+      expect(output, contains('"required": []'));
+      expect(_withoutSpaces(output), contains(".toList())??const['a']"));
+    });
+
+    test('list of an enum from a prefixed import', () async {
+      final output = await _generate(
+        '/// Doc.\n@Tool()\nvoid f(List<u.Unit> units) {}\n',
+        extraSources: {'a|lib/units.dart': 'enum Unit { c, f }'},
+        header:
+            "import 'package:llm_tool_calling/llm_tool_calling.dart';\n"
+            "import 'units.dart' as u;\n\n"
+            "part 'tools.g.dart';\n\n",
+      );
+      expect(output, contains('u.Unit.values.byName('));
+    });
+  });
+
   group('return types', () {
     test('void function returns null', () async {
       final output = await _generate('''
@@ -638,7 +747,11 @@ void get$weather() {}
     });
 
     for (final type in [
-      'List<String>',
+      'List<String?>',
+      'List<dynamic>',
+      'List<DateTime>',
+      'List<List<Object>>',
+      'Set<String>',
       'Map<String, Object?>',
       'dynamic',
       'Object',
@@ -757,5 +870,7 @@ Future<List<String>> _compileErrors(
   resolverFor: 'a|lib/tools.dart',
 );
 
-/// [code] with all whitespace removed, so checks don't depend on formatting.
-String _withoutSpaces(String code) => code.replaceAll(RegExp(r'\s+'), '');
+/// [code] without whitespace and trailing commas, so checks don't depend on
+/// how the formatter wrapped it.
+String _withoutSpaces(String code) =>
+    code.replaceAll(RegExp(r'\s+'), '').replaceAll(RegExp(r',(?=[}\])])'), '');

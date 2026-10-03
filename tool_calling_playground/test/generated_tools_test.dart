@@ -1,5 +1,7 @@
 // Runs code produced by the real generator through build_runner.
 // After changing lib/tools.dart, run `dart run build_runner build` first.
+import 'dart:convert';
+
 import 'package:llm_tool_calling/llm_tool_calling.dart';
 import 'package:test/test.dart';
 import 'package:tool_calling_playground/tools.dart';
@@ -57,6 +59,40 @@ void main() {
             'Invalid arguments for "convertTemperature": from must be one of '
                 '"celsius", "fahrenheit", "kelvin", got "rankine"',
           ),
+        ),
+      );
+    });
+  });
+
+  group('averageTemperature (lists)', () {
+    Future<Object?> callWithJson(String json) =>
+        averageTemperatureTool(jsonDecode(json) as Map<String, Object?>);
+
+    test('converts JSON numbers, including ints, to List<double>', () async {
+      expect(
+        await callWithJson('{"readings": [20, 21.5, 22]}'),
+        21.166666666666668,
+      );
+    });
+
+    test('converts a list of enum names', () async {
+      expect(
+        await callWithJson(
+          '{"readings": [32, 0], "units": ["fahrenheit", "celsius"]}',
+        ),
+        0,
+      );
+    });
+
+    test('reports bad items with their index', () async {
+      await expectLater(
+        () =>
+            callWithJson('{"readings": [1, "two"], "units": ["celsius", "x"]}'),
+        throwsA(
+          isA<ToolArgumentException>().having((e) => e.errors, 'errors', [
+            'readings[1] must be a number, got string',
+            'units[1] must be one of "celsius", "fahrenheit", "kelvin", got "x"',
+          ]),
         ),
       );
     });

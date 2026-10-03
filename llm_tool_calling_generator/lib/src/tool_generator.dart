@@ -103,8 +103,8 @@ class ToolGenerator extends GeneratorForAnnotation<Tool> {
       if (typeSchema == null) {
         throw InvalidGenerationSource(
           'Parameter "$name" has type ${param.type.getDisplayString()}, '
-          'which is not supported yet. Use String, int, double, num, bool '
-          'or an enum.',
+          'which is not supported yet. Use String, int, double, num, bool, '
+          'an enum, or a List of these.',
           element: param,
         );
       }
@@ -175,6 +175,13 @@ Map<String, Object?>? _typeSchema(DartType type) {
       'enum': [for (final value in enumElement.constants) value.displayName],
     };
   }
+  if (_listItemType(type) case final itemType?) {
+    // Items can't be null: LLMs rarely need it, and it keeps schemas simple.
+    if (itemType.nullabilitySuffix == NullabilitySuffix.question) return null;
+    final itemSchema = _typeSchema(itemType);
+    if (itemSchema == null) return null;
+    return {'type': 'array', 'items': itemSchema};
+  }
   return null;
 }
 
@@ -182,6 +189,12 @@ EnumElement? _enumOf(DartType type) => switch (type) {
   InterfaceType(element: final EnumElement element) => element,
   _ => null,
 };
+
+/// `T` for a `List<T>`, otherwise null.
+DartType? _listItemType(DartType type) =>
+    type is InterfaceType && type.isDartCoreList
+    ? type.typeArguments.single
+    : null;
 
 /// How code in [library] (and so in its generated part) refers to [element]:
 /// `Unit`, or `u.Unit` when it is only imported with `as u`.
@@ -206,20 +219,40 @@ String _readArg(
   required bool nullable,
   required LibraryElement library,
 }) {
-  final q = nullable ? '?' : '';
   final value = 'args[${_literal(name)}]';
+  if (!nullable) return _convert(value, type, library);
+
+  // Short forms for simple types keep the generated code readable.
+  if (type.isDartCoreDouble) return '($value as num?)?.toDouble()';
+  if (type.isDartCoreInt) return '($value as num?)?.toInt()';
+  if (type.isDartCoreString) return '$value as String?';
+  if (type.isDartCoreBool) return '$value as bool?';
+  if (type.isDartCoreNum) return '$value as num?';
+  // Parenthesized so a following `?? default` applies to the whole thing.
+  return '($value == null ? null : ${_convert(value, type, library)})';
+}
+
+/// Code that converts [value], a non-null JSON value, to [type].
+///
+/// Only called for types that [_typeSchema] accepted.
+String _convert(String value, DartType type, LibraryElement library) {
   // JSON has no int/double difference: 5 can arrive as int and 5.0 as
   // double, so read as num and convert.
-  if (type.isDartCoreDouble) return '($value as num$q)$q.toDouble()';
-  if (type.isDartCoreInt) return '($value as num$q)$q.toInt()';
+  if (type.isDartCoreDouble) return '($value as num).toDouble()';
+  if (type.isDartCoreInt) return '($value as num).toInt()';
+  if (type.isDartCoreString) return '$value as String';
+  if (type.isDartCoreBool) return '$value as bool';
+  if (type.isDartCoreNum) return '$value as num';
   if (_enumOf(type) case final enumElement?) {
-    final byName = '${_referenceTo(enumElement, library)}.values.byName';
-    if (!nullable) return '$byName($value as String)';
-    // Parenthesized so a following `?? default` applies to the whole thing.
-    return '($value == null ? null : $byName($value as String))';
+    return '${_referenceTo(enumElement, library)}.values.byName('
+        '$value as String)';
   }
-  final typeName = type.getDisplayString().replaceAll('?', '');
-  return '$value as $typeName$q';
+  if (_listItemType(type) case final itemType?) {
+    // `e` may shadow an outer `e` in nested lists, which Dart allows.
+    return '($value as List).map((e) => ${_convert('e', itemType, library)})'
+        '.toList()';
+  }
+  throw StateError('Unsupported type: ${type.getDisplayString()}');
 }
 
 /// Reads the text from @Param('...') on a parameter, if present.

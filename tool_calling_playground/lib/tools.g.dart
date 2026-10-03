@@ -60,3 +60,38 @@ final convertTemperatureTool = ToolDefinition(
         TemperatureUnit.celsius,
   ),
 );
+
+final averageTemperatureTool = ToolDefinition(
+  name: "averageTemperature",
+  description:
+      "Averages a list of temperatures, converting each to one unit first.",
+  parametersSchema: {
+    "type": "object",
+    "properties": {
+      "readings": {
+        "type": "array",
+        "items": {"type": "number"},
+        "description": "Readings to average",
+      },
+      "units": {
+        "type": "array",
+        "items": {
+          "type": "string",
+          "enum": ["celsius", "fahrenheit", "kelvin"],
+        },
+        "description": "Unit of each reading, same order as readings",
+      },
+    },
+    "required": ["readings"],
+    "additionalProperties": false,
+  },
+  requiresConfirmation: false,
+  execute: (args) => averageTemperature(
+    (args["readings"] as List).map((e) => (e as num).toDouble()).toList(),
+    units: (args["units"] == null
+        ? null
+        : (args["units"] as List)
+              .map((e) => TemperatureUnit.values.byName(e as String))
+              .toList()),
+  ),
+);

@@ -1,5 +1,7 @@
 ## Unreleased
 
+- `validateArguments()` checks every item of an `array` against `items`,
+  reporting paths like `tags[2]` and `grid[1][0]`.
 - `validateArguments()` checks `enum` lists and reports the allowed values,
   e.g. `unit must be one of "celsius", "fahrenheit", got "kelvin"`.
 

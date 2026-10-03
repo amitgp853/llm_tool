@@ -29,3 +29,17 @@ double convertTemperature(
     TemperatureUnit.kelvin => celsius + 273.15,
   };
 }
+
+/// Averages a list of temperatures, converting each to one unit first.
+@Tool()
+double averageTemperature(
+  @Param('Readings to average') List<double> readings, {
+  @Param('Unit of each reading, same order as readings')
+  List<TemperatureUnit>? units,
+}) {
+  final celsius = [
+    for (final (i, value) in readings.indexed)
+      convertTemperature(value, units?[i] ?? TemperatureUnit.celsius),
+  ];
+  return celsius.reduce((a, b) => a + b) / celsius.length;
+}

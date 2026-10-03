@@ -135,6 +135,106 @@ void main() {
       });
     });
 
+    group('array items', () {
+      Map<String, Object?> listOf(Map<String, Object?> items) => {
+        'type': 'object',
+        'properties': {
+          'tags': {'type': 'array', 'items': items},
+        },
+      };
+
+      test('accepts matching items and an empty list', () {
+        final schema = listOf({'type': 'string'});
+        expect(
+          validateArguments(schema, {
+            'tags': ['a', 'b'],
+          }),
+          isEmpty,
+        );
+        expect(validateArguments(schema, {'tags': []}), isEmpty);
+      });
+
+      test('reports every wrong item with its index', () {
+        expect(
+          validateArguments(listOf({'type': 'string'}), {
+            'tags': ['a', 1, true],
+          }),
+          [
+            'tags[1] must be a string, got integer',
+            'tags[2] must be a string, got boolean',
+          ],
+        );
+      });
+
+      test('null items are reported', () {
+        expect(
+          validateArguments(listOf({'type': 'string'}), {
+            'tags': ['a', null],
+          }),
+          ['tags[1] must be a string, got null'],
+        );
+      });
+
+      test('integer items accept whole doubles', () {
+        expect(
+          validateArguments(listOf({'type': 'integer'}), {
+            'tags': [1, 2.0],
+          }),
+          isEmpty,
+        );
+      });
+
+      test('enum items are checked', () {
+        final schema = listOf({
+          'type': 'string',
+          'enum': ['red', 'green'],
+        });
+        expect(
+          validateArguments(schema, {
+            'tags': ['red', 'blue'],
+          }),
+          ['tags[1] must be one of "red", "green", got "blue"'],
+        );
+      });
+
+      test('nested lists report the full path', () {
+        final schema = listOf({
+          'type': 'array',
+          'items': {'type': 'integer'},
+        });
+        expect(
+          validateArguments(schema, {
+            'tags': [
+              [1],
+              [2, 'x'],
+            ],
+          }),
+          ['tags[1][1] must be an integer, got string'],
+        );
+      });
+
+      test('not a list is a type error, items are not checked', () {
+        expect(validateArguments(listOf({'type': 'string'}), {'tags': 'a'}), [
+          'tags must be an array, got string',
+        ]);
+      });
+
+      test('array without items accepts anything inside', () {
+        final schema = {
+          'type': 'object',
+          'properties': {
+            'tags': {'type': 'array'},
+          },
+        };
+        expect(
+          validateArguments(schema, {
+            'tags': [1, 'a', null],
+          }),
+          isEmpty,
+        );
+      });
+    });
+
     test('malformed property schema does not crash', () {
       final badSchema = {
         'type': 'object',

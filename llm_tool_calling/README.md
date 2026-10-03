@@ -165,6 +165,7 @@ even when you set a custom `name`.
 | `num` | `"number"` | |
 | `bool` | `"boolean"` | |
 | any `enum` | `"string"` with `"enum": [...]` | Sent as value names, e.g. `"celsius"`. |
+| `List<T>` of any type above | `"array"` with `"items": {...}` | Includes lists of enums and nested lists. Items can't be nullable. |
 
 Parameters can be positional or named, and any of them can be nullable or
 have a default value:
@@ -178,7 +179,7 @@ have a default value:
 Functions can return anything, including `Future<T>` and `void` (`void`
 tools return `null`).
 
-`List` and custom classes are not supported yet; see the
+Custom classes, `Map`, `Set` and `DateTime` are not supported yet; see the
 [roadmap](#roadmap). Using them is a build-time error, not a silent bug.
 
 ## Validation and errors
@@ -192,6 +193,7 @@ tools return `null`).
 | Argument not in the schema | `colour is not a known argument` |
 | Wrong JSON type | `city must be a string, got integer` |
 | Value not in an enum | `unit must be one of "celsius", "fahrenheit", got "kelvin"` |
+| Wrong list item (every one is checked) | `tags[2] must be a string, got integer` |
 
 If anything is wrong, your function does not run and a
 `ToolArgumentException` is thrown. Its `toString()` is written for the LLM:
@@ -244,7 +246,8 @@ Good to know:
   contain `$`.
 
 **`Parameter "x" has type ..., which is not supported yet`**
-- Use `String`, `int`, `double`, `num`, `bool` or an enum; see
+- Use `String`, `int`, `double`, `num`, `bool`, an enum, or a `List` of
+  these (items can't be nullable: use `List<String>`, not `List<String?>`); see
   [Supported types](#supported-types).
 
 **`Conflicting outputs were detected`**
@@ -255,7 +258,7 @@ All of them write into the same shared `.g.dart` part.
 
 ## Roadmap
 
-- `List` and custom class parameters (nested object schemas).
+- Custom class parameters (nested object schemas).
 - A generated list of all tools in a file, e.g. `allTools`.
 - Ready-made tool objects and schemas for popular SDKs such as `llm_sdk`,
   `flutter_ai_tools` and `firebase_ai`.

@@ -1,5 +1,7 @@
 ## Unreleased
 
+- `List<T>` parameters for every supported `T`, including enums and nested
+  lists. `List<int>` and `List<double>` accept any JSON number.
 - Enum parameters, sent to the LLM as their value names. Works with
   nullable enums, defaults, enhanced enums and prefixed imports
   (`import 'units.dart' as u;`).
