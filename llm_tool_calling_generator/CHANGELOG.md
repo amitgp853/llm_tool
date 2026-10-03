@@ -1,8 +1,9 @@
-## Unreleased
+## 0.3.0
 
 - Generates a list of all tools in each file, named after the file:
   `allTools` for `tools.dart`, `weatherTools` for `weather_tools.dart`.
   If you already declared a variable with that name in the file, rename it.
+- README: author section.
 
 ## 0.2.0
 

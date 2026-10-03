@@ -1,3 +1,9 @@
+## 0.3.0
+
+- No code changes. Released together with `llm_tool_calling_generator`
+  0.3.0, which generates a list of all tools in each file.
+- README: the list of all tools, and an author section.
+
 ## 0.2.0
 
 - `validateArguments()` checks nested objects (fields with `properties`),
