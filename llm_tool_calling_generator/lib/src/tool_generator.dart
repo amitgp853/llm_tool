@@ -19,11 +19,29 @@ final _toolChecker = TypeChecker.typeNamed(Tool, inPackage: 'llm_tool_calling');
 class ToolGenerator extends GeneratorForAnnotation<Tool> {
   ToolGenerator() : super(inPackage: 'llm_tool_calling');
 
+  /// Generates every tool, then a list of all tools in the file.
+  @override
+  Future<String> generate(LibraryReader library, BuildStep buildStep) async {
+    _checkNoToolMethods(library.element);
+    final tools = await super.generate(library, buildStep);
+    if (tools.isEmpty) return tools;
+
+    final names = [
+      for (final annotated in library.annotatedWith(typeChecker))
+        '${annotated.element.displayName}Tool',
+    ];
+    final listName = toolListName(buildStep.inputId.pathSegments.last);
+    return '''
+$tools
+
+/// Every tool in this file, e.g. to send to an LLM or look up by name.
+final List<ToolDefinition> $listName = [${names.join(', ')}];
+''';
+  }
+
   /// GeneratorForAnnotation only looks at top-level declarations, so @Tool on
   /// a method would be silently ignored. Fail loudly instead.
-  @override
-  FutureOr<String> generate(LibraryReader library, BuildStep buildStep) {
-    final lib = library.element;
+  void _checkNoToolMethods(LibraryElement lib) {
     final containers = <InstanceElement>[
       ...lib.classes,
       ...lib.mixins,
@@ -43,7 +61,6 @@ class ToolGenerator extends GeneratorForAnnotation<Tool> {
         }
       }
     }
-    return super.generate(library, buildStep);
   }
 
   @override
@@ -425,6 +442,30 @@ String? _paramDescription(Element param) {
   final annotation = _paramChecker.firstAnnotationOf(param);
   if (annotation == null) return null;
   return ConstantReader(annotation).read('description').stringValue;
+}
+
+/// The name of the generated list of all tools in [fileName]:
+/// `weather.dart` and `weather_tools.dart` give `weatherTools`,
+/// `tools.dart` gives `allTools`.
+String toolListName(String fileName) {
+  final words = fileName
+      .replaceFirst(RegExp(r'\.dart$'), '')
+      .split(RegExp('[^A-Za-z0-9]+'))
+      .where((word) => word.isNotEmpty)
+      .toList();
+  // Avoid `weatherToolsTools`.
+  if (words.isNotEmpty && words.last.toLowerCase() == 'tools') {
+    words.removeLast();
+  }
+  if (words.isEmpty || words.first.startsWith(RegExp('[0-9]'))) {
+    return 'allTools';
+  }
+  final camelCase = [
+    words.first.toLowerCase(),
+    for (final word in words.skip(1))
+      word[0].toUpperCase() + word.substring(1).toLowerCase(),
+  ].join();
+  return '${camelCase}Tools';
 }
 
 /// Accepted by OpenAI, Anthropic and Gemini (the strictest: it requires a

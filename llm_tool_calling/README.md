@@ -42,7 +42,8 @@ String getWeather(
 dart run build_runner build
 ```
 
-This creates `lib/tools.g.dart` containing `getWeatherTool`.
+This creates `lib/tools.g.dart` containing `getWeatherTool`, and `allTools`,
+a list of every tool in the file.
 
 **4. Use it**
 
@@ -137,7 +138,7 @@ When the model replies with a tool call, look the tool up by name and call
 it with the decoded arguments:
 
 ```dart
-final tools = {for (final t in [getWeatherTool, searchTool]) t.name: t};
+final tools = {for (final t in allTools) t.name: t};
 
 final tool = tools[toolCall.name]!;
 try {
@@ -184,6 +185,22 @@ have a key for, and checks that the model's arguments pass validation.
 
 The generated variable is always `<functionName>Tool`, e.g. `getWeatherTool`,
 even when you set a custom `name`.
+
+### All tools in a file
+
+Each file with tools also gets a list of all of them, in source order, named
+after the file so that several tool files never clash:
+
+| File | Generated list |
+|---|---|
+| `tools.dart` | `allTools` |
+| `weather.dart` or `weather_tools.dart` | `weatherTools` |
+| `flight_booking.dart` | `flightBookingTools` |
+
+```dart
+// Send every tool to the LLM, from one file or several:
+final tools = [...weatherTools, ...flightBookingTools];
+```
 
 ## Supported types
 
@@ -341,7 +358,6 @@ All of them write into the same shared `.g.dart` part.
 
 ## Roadmap
 
-- A generated list of all tools in a file, e.g. `allTools`.
 - Ready-made tool objects and schemas for popular SDKs such as `llm_sdk`,
   `flutter_ai_tools` and `firebase_ai`.
 - `llm_tool_calling_flutter`: an approval widget for

@@ -6,6 +6,8 @@ import 'package:build/build.dart';
 import 'package:build_test/build_test.dart';
 import 'package:glob/glob.dart';
 import 'package:llm_tool_calling_generator/llm_tool_calling_generator.dart';
+import 'package:llm_tool_calling_generator/src/tool_generator.dart'
+    show toolListName;
 import 'package:test/test.dart';
 
 void main() {
@@ -847,6 +849,58 @@ void f(Line line, Point extra) {}
 ''');
         expect(output, contains('Line('));
       });
+    });
+  });
+
+  group('list of all tools', () {
+    test('lists every tool in source order, named after the file', () async {
+      final output = await _generate('''
+/// One.
+@Tool()
+void one() {}
+
+/// Two.
+@Tool(name: 'second')
+void two() {}
+''');
+      expect(
+        _withoutSpaces(output),
+        contains('finalList<ToolDefinition>allTools=[oneTool,twoTool]'),
+      );
+      expect(output, contains('/// Every tool in this file'));
+    });
+
+    test('a single tool still gets a list', () async {
+      final output = await _generate('/// Doc.\n@Tool()\nvoid only() {}\n');
+      expect(_withoutSpaces(output), contains('allTools=[onlyTool]'));
+    });
+
+    test('other file names give other list names', () async {
+      final result = await _build(
+        "import 'package:llm_tool_calling/llm_tool_calling.dart';\n\n"
+        "part 'flight_booking.g.dart';\n\n"
+        '/// Doc.\n@Tool()\nvoid book() {}\n',
+        path: 'lib/flight_booking.dart',
+      );
+      final output = result.readerWriter.testing.readString(
+        AssetId('a', 'lib/flight_booking.llm_tool_calling.g.part'),
+      );
+      expect(_withoutSpaces(output), contains('flightBookingTools=[bookTool]'));
+    });
+
+    group('toolListName', () {
+      for (final (file, name) in [
+        ('tools.dart', 'allTools'),
+        ('weather.dart', 'weatherTools'),
+        ('weather_tools.dart', 'weatherTools'),
+        ('flight_booking.dart', 'flightBookingTools'),
+        ('my_AI_tools.dart', 'myAiTools'),
+        ('_private.dart', 'privateTools'),
+        ('2fa.dart', 'allTools'),
+        ('tools_tools.dart', 'toolsTools'),
+      ]) {
+        test('$file -> $name', () => expect(toolListName(file), name));
+      }
     });
   });
 

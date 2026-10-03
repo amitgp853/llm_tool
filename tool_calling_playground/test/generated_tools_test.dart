@@ -145,4 +145,23 @@ void main() {
       expect(bookFlightTool.requiresConfirmation, isTrue);
     });
   });
+
+  group('allTools', () {
+    test('lists every tool in the file, in source order', () {
+      expect(allTools.map((tool) => tool.name), [
+        'getWeather',
+        'convertTemperature',
+        'averageTemperature',
+        'bookFlight',
+      ]);
+    });
+
+    test('dispatch by the name the LLM sends', () async {
+      final byName = {for (final tool in allTools) tool.name: tool};
+      expect(
+        await byName['getWeather']!({'city': 'Pune'}),
+        'Sunny, 31°C in Pune',
+      );
+    });
+  });
 }

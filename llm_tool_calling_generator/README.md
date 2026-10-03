@@ -70,7 +70,13 @@ final getWeatherTool = ToolDefinition(
     celsius: args["celsius"] as bool? ?? true,
   ),
 );
+
+/// Every tool in this file, e.g. to send to an LLM or look up by name.
+final List<ToolDefinition> allTools = [getWeatherTool];
 ```
+
+The list is named after the file: `tools.dart` gives `allTools`,
+`weather_tools.dart` gives `weatherTools`.
 
 ## Supported
 

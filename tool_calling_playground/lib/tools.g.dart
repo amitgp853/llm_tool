@@ -165,3 +165,11 @@ final bookFlightTool = ToolDefinition(
     ))(args["booking"] as Map),
   ),
 );
+
+/// Every tool in this file, e.g. to send to an LLM or look up by name.
+final List<ToolDefinition> allTools = [
+  getWeatherTool,
+  convertTemperatureTool,
+  averageTemperatureTool,
+  bookFlightTool,
+];

@@ -72,3 +72,10 @@ final deleteFileTool = ToolDefinition(
     return null;
   },
 );
+
+/// Every tool in this file, e.g. to send to an LLM or look up by name.
+final List<ToolDefinition> exampleTools = [
+  getWeatherTool,
+  convertCurrencyTool,
+  deleteFileTool,
+];
