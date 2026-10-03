@@ -123,6 +123,14 @@ expects, for example:
   'description': tool.description,
   'input_schema': tool.parametersSchema,
 }
+
+// Gemini (2.5 and later): use `parametersJsonSchema`, not `parameters`.
+// The older `parameters` field rejects `additionalProperties`.
+{
+  'name': tool.name,
+  'description': tool.description,
+  'parametersJsonSchema': tool.parametersSchema,
+}
 ```
 
 When the model replies with a tool call, look the tool up by name and call
@@ -141,6 +149,28 @@ try {
 ```
 
 Ready-made adapters for popular SDKs are on the [roadmap](#roadmap).
+
+## Compatibility
+
+Generated schemas use plain JSON Schema (`type`, `properties`, `required`,
+`enum`, `items`, nested objects, `description`, `additionalProperties`), and
+generated tool and parameter names follow the strictest provider rules. They
+work with:
+
+| Provider | Put `parametersSchema` in | Arguments arrive as | Notes |
+|---|---|---|---|
+| **OpenAI** (Chat Completions, Responses) | `tools[].function.parameters` (`tools[].parameters` in Responses) | JSON **string**: `jsonDecode` it | Works as-is. Strict mode (`strict: true`) also needs every field in `required`, so it only fits tools without optional parameters. |
+| **Anthropic Claude** | `tools[].input_schema` | Object (`input`) | Current models don't allow forced `tool_choice`; use `auto` and name the tool in your prompt. |
+| **Google Gemini** 2.5+ | `functionDeclarations[].parametersJsonSchema` | Object (`args`) | Use `parametersJsonSchema`, **not** `parameters`: the older field rejects `additionalProperties`. Works with `firebase_ai` via the same field. |
+| **Mistral** | `tools[].function.parameters` | JSON string | Same shape as OpenAI. |
+| **Ollama** (local models) | `tools[].function.parameters` | Object | How well the model fills nested objects depends on the model. |
+| Other OpenAI-compatible APIs (DeepSeek, Groq, xAI…) | Same as OpenAI | Usually a JSON string | Same request shape as OpenAI. |
+
+Checked against each provider's official documentation in October 2026.
+To test it live with your own API keys, run
+[`provider_check.dart`](https://github.com/amitgp853/llm_tool_calling/blob/main/tool_calling_playground/bin/provider_check.dart):
+it sends a tool with nested objects, lists and enums to every provider you
+have a key for, and checks that the model's arguments pass validation.
 
 ## Annotations
 
@@ -276,9 +306,14 @@ Good to know:
   your tool.
 
 **`Tool name "..." is invalid`**
-- Providers only accept 1–64 letters, digits, `_` and `-`. Use
+- To work with every provider, a name must start with a letter or `_` and
+  use only letters, digits, `_` and `-`, up to 64 characters. Use
   `@Tool(name: 'valid_name')`. This also applies to function names that
   contain `$`.
+
+**`Parameter "..." has a name some LLM providers reject`**
+- Gemini only accepts letters, digits and `_` in parameter names, so rename
+  parameters or fields that contain `$`.
 
 **`Parameter "x" has type ..., which is not supported yet`**
 - Use `String`, `int`, `double`, `num`, `bool`, an enum, your own class, or a

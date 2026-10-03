@@ -7,7 +7,7 @@ For every `@Tool()` function it generates a `ToolDefinition` with the JSON
 Schema for the LLM, argument validation and type-safe dispatch.
 
 The full documentation, including supported types, validation and errors, and
-how to send tools to OpenAI or Anthropic, is in the
+how to send tools to OpenAI, Anthropic or Gemini, is in the
 [`llm_tool_calling` README](https://pub.dev/packages/llm_tool_calling).
 
 ## Quick start

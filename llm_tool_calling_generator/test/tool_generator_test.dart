@@ -1104,7 +1104,14 @@ void f() {}
       );
     });
 
-    for (final name in ['get weather', 'get.weather', '', 'a' * 65]) {
+    for (final name in [
+      'get weather',
+      'get.weather',
+      '',
+      'a' * 65,
+      '1_lookup',
+      '-lookup',
+    ]) {
       test('invalid custom name "$name"', () async {
         expect(
           await _buildErrors('''
@@ -1126,6 +1133,42 @@ void get$weather() {}
 '''),
         contains(r'Tool name "get$weather" is invalid.'),
       );
+    });
+
+    test(r'parameter name with \$ is rejected', () async {
+      expect(
+        await _buildErrors(r'''
+/// Doc.
+@Tool()
+void f(String a$b) {}
+'''),
+        contains(r'Parameter "a$b" has a name some LLM providers reject'),
+      );
+    });
+
+    test(r'class field name with \$ is rejected with its path', () async {
+      expect(
+        await _buildErrors(r'''
+class P {
+  P(this.$id);
+  final int $id;
+}
+
+/// Doc.
+@Tool()
+void f(P p) {}
+'''),
+        contains(r'Field "p.$id" has a name some LLM providers reject'),
+      );
+    });
+
+    test('names starting with _ are fine', () async {
+      final output = await _generate('''
+/// Doc.
+@Tool(name: '_internal-lookup')
+void f(String _key) {}
+''');
+      expect(output, contains('name: "_internal-lookup"'));
     });
 
     test('nullable list items explain how to fix it', () async {

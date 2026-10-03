@@ -32,6 +32,13 @@ dart analyze
 (cd llm_tool_calling_generator && dart test)
 ```
 
+To check the generated schemas against real providers with your own API
+keys (see the comment at the top of the file for the variables):
+
+```sh
+cd tool_calling_playground && dart run bin/provider_check.dart
+```
+
 Publish `llm_tool_calling` before `llm_tool_calling_generator`, which depends
 on it.
 

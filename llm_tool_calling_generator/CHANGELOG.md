@@ -1,10 +1,13 @@
-## Unreleased
+## 0.2.0
 
 - Class parameters become nested object schemas, built through the class's
   unnamed constructor. Descriptions from `@Param` or field doc comments;
   defaults, nested classes, lists of classes, freezed classes and prefixed
   imports are supported.
 - Generated code no longer causes analyzer warnings in your project.
+- Tool names must start with a letter or `_`, and parameter names may only
+  use letters, digits and `_`, so every schema works with Gemini as well as
+  OpenAI and Claude. Other names are a build-time error.
 - `List<T>` parameters for every supported `T`, including enums and nested
   lists. `List<int>` and `List<double>` accept any JSON number.
 - Enum parameters, sent to the LLM as their value names. Works with

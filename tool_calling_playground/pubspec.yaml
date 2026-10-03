@@ -11,10 +11,10 @@ environment:
 # Add regular dependencies here.
 dependencies:
   path: ^1.9.0
-  llm_tool_calling: ^0.1.0
+  llm_tool_calling: ^0.2.0
 
 dev_dependencies:
   lints: ^6.0.0
   test: ^1.32.0
   build_runner: ^2.16.0
-  llm_tool_calling_generator: ^0.1.0
+  llm_tool_calling_generator: ^0.2.0

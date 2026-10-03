@@ -1,4 +1,4 @@
-## Unreleased
+## 0.2.0
 
 - `validateArguments()` checks nested objects (fields with `properties`),
   reporting paths like `booking.passengers[0].age is required`.

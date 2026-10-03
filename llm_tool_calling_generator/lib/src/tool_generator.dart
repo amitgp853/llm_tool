@@ -73,8 +73,10 @@ class ToolGenerator extends GeneratorForAnnotation<Tool> {
     // OpenAI, Anthropic and Gemini all reject names outside this pattern.
     if (!_validToolName.hasMatch(toolName)) {
       throw InvalidGenerationSource(
-        'Tool name "$toolName" is invalid. LLM providers only accept 1-64 '
-        'letters, digits, "_" or "-". Use @Tool(name: ...) to set a valid one.',
+        'Tool name "$toolName" is invalid. To work with every LLM provider it '
+        'must start with a letter or "_", then use only letters, digits, "_" '
+        'or "-", up to 64 characters. Use @Tool(name: ...) to set a valid '
+        'one.',
         element: element,
       );
     }
@@ -158,6 +160,14 @@ class _TypeMapper {
     for (final param in params) {
       final name = param.displayName;
       final paramPath = path.isEmpty ? name : '$path.$name';
+      if (!_validParameterName.hasMatch(name)) {
+        throw InvalidGenerationSource(
+          '${path.isEmpty ? 'Parameter' : 'Field'} "$paramPath" has a name '
+          'some LLM providers reject (Gemini allows only letters, digits and '
+          '"_", up to 64 characters). Rename it.',
+          element: param,
+        );
+      }
       final description = _paramDescription(param) ?? _fieldDescription(param);
       properties[name] = {
         ...schemaFor(param.type, paramPath, param),
@@ -417,7 +427,12 @@ String? _paramDescription(Element param) {
   return ConstantReader(annotation).read('description').stringValue;
 }
 
-final _validToolName = RegExp(r'^[a-zA-Z0-9_-]{1,64}$');
+/// Accepted by OpenAI, Anthropic and Gemini (the strictest: it requires a
+/// letter or `_` first).
+final _validToolName = RegExp(r'^[a-zA-Z_][a-zA-Z0-9_-]{0,63}$');
+
+/// Gemini only accepts letters, digits and `_` in parameter names.
+final _validParameterName = RegExp(r'^[a-zA-Z_][a-zA-Z0-9_]{0,63}$');
 
 /// Turns "/// Gets the weather." (or a /** */ block) into "Gets the weather."
 ///
