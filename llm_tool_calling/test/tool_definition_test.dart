@@ -19,7 +19,7 @@ void main() {
     },
   );
 
-    group('validateArguments', () {
+  group('validateArguments', () {
     final schema = weatherTool.parametersSchema;
 
     test('valid arguments return no errors', () {
@@ -42,28 +42,56 @@ void main() {
     });
 
     test('wrong type is reported', () {
-      expect(
-        validateArguments(schema, {'city': 123}),
-        ['city must be a string, got integer'],
-      );
+      expect(validateArguments(schema, {'city': 123}), [
+        'city must be a string, got integer',
+      ]);
     });
 
     test('unknown argument is reported', () {
-      expect(
-        validateArguments(schema, {'city': 'Kanpur', 'colour': 'red'}),
-        ['colour is not a known argument'],
-      );
+      expect(validateArguments(schema, {'city': 'Kanpur', 'colour': 'red'}), [
+        'colour is not a known argument',
+      ]);
     });
 
     test('all errors are reported together', () {
-      expect(
-        validateArguments(schema, {'celsius': 'yes', 'colour': 'red'}),
-        [
-          'city is required',
-          'celsius must be a boolean, got string',
-          'colour is not a known argument',
-        ],
-      );
+      expect(validateArguments(schema, {'celsius': 'yes', 'colour': 'red'}), [
+        'city is required',
+        'celsius must be a boolean, got string',
+        'colour is not a known argument',
+      ]);
+    });
+
+    group('integer', () {
+      final countSchema = {
+        'type': 'object',
+        'properties': {
+          'count': {'type': 'integer'},
+        },
+      };
+
+      test('accepts whole numbers sent as doubles (5.0)', () {
+        expect(validateArguments(countSchema, {'count': 5.0}), isEmpty);
+      });
+
+      test('rejects fractional numbers with "an integer"', () {
+        expect(validateArguments(countSchema, {'count': 5.5}), [
+          'count must be an integer, got number',
+        ]);
+      });
+
+      test('rejects infinity', () {
+        expect(validateArguments(countSchema, {'count': double.infinity}), [
+          'count must be an integer, got number',
+        ]);
+      });
+    });
+
+    test('malformed property schema does not crash', () {
+      final badSchema = {
+        'type': 'object',
+        'properties': {'city': 'string'},
+      };
+      expect(validateArguments(badSchema, {'city': 'Kanpur'}), isEmpty);
     });
   });
 
@@ -105,7 +133,10 @@ void main() {
         execute: (args) => ran = true,
       );
 
-      await expectLater(() => tracked({}), throwsA(isA<ToolArgumentException>()));
+      await expectLater(
+        () => tracked({}),
+        throwsA(isA<ToolArgumentException>()),
+      );
       expect(ran, isFalse);
     });
   });

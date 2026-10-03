@@ -23,30 +23,42 @@ List<String> validateArguments(
     }
     if (value == null) continue; // already reported above if required
 
-    final expected = (property as Map)['type'] as String?;
-    if (expected != null && !_matchesType(value, expected)) {
-      errors.add('$key must be a $expected, got ${_jsonType(value)}');
+    // A malformed (hand-written) schema shouldn't crash validation.
+    if (property is! Map) continue;
+    final expected = property['type'];
+    if (expected is String && !_matchesType(value, expected)) {
+      errors.add(
+        '$key must be ${_withArticle(expected)}, '
+        'got ${_jsonType(value)}',
+      );
     }
   }
   return errors;
 }
 
 bool _matchesType(Object value, String type) => switch (type) {
-      'string' => value is String,
-      'integer' => value is int,
-      'number' => value is num,
-      'boolean' => value is bool,
-      'array' => value is List,
-      'object' => value is Map,
-      _ => true, // unknown type: don't block it
-    };
+  'string' => value is String,
+  // LLMs sometimes send whole numbers as 5.0, and jsonDecode turns that
+  // into a double. Accept it; generated code converts with toInt().
+  'integer' => value is int || (value is double && _isWhole(value)),
+  'number' => value is num,
+  'boolean' => value is bool,
+  'array' => value is List,
+  'object' => value is Map,
+  _ => true, // unknown type: don't block it
+};
+
+bool _isWhole(double value) => value.isFinite && value == value.truncate();
+
+String _withArticle(String type) =>
+    type.startsWith(RegExp('[aeiou]')) ? 'an $type' : 'a $type';
 
 String _jsonType(Object value) => switch (value) {
-      String() => 'string',
-      int() => 'integer',
-      double() => 'number',
-      bool() => 'boolean',
-      List() => 'array',
-      Map() => 'object',
-      _ => value.runtimeType.toString(),
-    };
+  String() => 'string',
+  int() => 'integer',
+  double() => 'number',
+  bool() => 'boolean',
+  List() => 'array',
+  Map() => 'object',
+  _ => value.runtimeType.toString(),
+};

@@ -6,7 +6,5 @@ part 'tools.g.dart';
 @Tool()
 String getWeather(
   @Param('City name, e.g. Kanpur') String city, {
-  @Param('Use Celsius instead of Fahrenheit')
-  bool celsius = true,
-}) =>
-    'Sunny, ${celsius ? '31°C' : '88°F'} in $city';
+  @Param('Use Celsius instead of Fahrenheit') bool celsius = true,
+}) => 'Sunny, ${celsius ? '31°C' : '88°F'} in $city';

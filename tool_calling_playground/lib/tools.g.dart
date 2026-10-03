@@ -19,6 +19,7 @@ final getWeatherTool = ToolDefinition(
       },
     },
     "required": ["city"],
+    "additionalProperties": false,
   },
   requiresConfirmation: false,
   execute: (args) => getWeather(

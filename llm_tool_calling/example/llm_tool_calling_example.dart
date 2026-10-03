@@ -23,6 +23,7 @@ final getWeatherTool = ToolDefinition(
       },
     },
     'required': ['city'],
+    'additionalProperties': false,
   },
   execute: (args) => getWeather(
     args['city'] as String,
@@ -33,7 +34,7 @@ final getWeatherTool = ToolDefinition(
 void main() async {
   // Pretend the AI sent this:
   final aiArgs = {'city': 'Kanpur', 'colour': 'red'};
-   try {
+  try {
     print(await getWeatherTool(aiArgs));
   } on ToolArgumentException catch (e) {
     print(e);
