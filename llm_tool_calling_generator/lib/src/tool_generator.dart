@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 
+import 'package:analyzer/dart/constant/value.dart';
 import 'package:analyzer/dart/element/element.dart';
 import 'package:analyzer/dart/element/nullability_suffix.dart';
 import 'package:analyzer/dart/element/type.dart';
@@ -91,60 +92,20 @@ class ToolGenerator extends GeneratorForAnnotation<Tool> {
         .read('requiresConfirmation')
         .boolValue;
 
-    // 3. Build the schema and the argument list, one parameter at a time.
-    final properties = <String, Object?>{};
-    final required = <String>[];
-    final positionalArgs = <String>[];
-    final namedArgs = <String>[];
-
-    for (final param in element.formalParameters) {
-      final name = param.displayName;
-      final typeSchema = _typeSchema(param.type);
-      if (typeSchema == null) {
-        throw InvalidGenerationSource(
-          'Parameter "$name" has type ${param.type.getDisplayString()}, '
-          'which is not supported yet. Use String, int, double, num, bool, '
-          'an enum, or a List of these.',
-          element: param,
-        );
-      }
-
-      final paramDescription = _paramDescription(param);
-      properties[name] = {...typeSchema, 'description': ?paramDescription};
-
-      // Required in the schema = no default value and can't be null.
-      final isNullable =
-          param.type.nullabilitySuffix == NullabilitySuffix.question;
-      final isRequired = !param.hasDefaultValue && !isNullable;
-      if (isRequired) required.add(name);
-
-      var value = _readArg(
-        name,
-        param.type,
-        nullable: !isRequired,
-        library: element.library,
-      );
-      if (param.hasDefaultValue) {
-        value = '$value ?? ${param.defaultValueCode}';
-      }
-
-      if (param.isNamed) {
-        namedArgs.add('$name: $value');
-      } else {
-        positionalArgs.add(value);
-      }
-    }
+    // 3. Build the schema and the call arguments from the parameters.
+    final params = _TypeMapper(
+      element.library,
+    ).parameters(element.formalParameters, map: 'args', path: '');
 
     // 4. Write the generated code.
     final schema = {
       'type': 'object',
-      'properties': properties,
-      'required': required,
+      'properties': params.properties,
+      'required': params.required,
       // Tells the LLM what call() enforces: no extra arguments.
       'additionalProperties': false,
     };
-    final call =
-        '$functionName(${[...positionalArgs, ...namedArgs].join(', ')})';
+    final call = '$functionName(${params.arguments})';
     final execute = element.returnType is VoidType
         ? '(args) { $call; return null; }'
         : '(args) => $call';
@@ -161,34 +122,271 @@ final ${functionName}Tool = ToolDefinition(
   }
 }
 
-/// The JSON Schema for a Dart type (without description), or null if the
-/// type is unsupported.
-Map<String, Object?>? _typeSchema(DartType type) {
-  if (type.isDartCoreString) return {'type': 'string'};
-  if (type.isDartCoreInt) return {'type': 'integer'};
-  if (type.isDartCoreDouble || type.isDartCoreNum) return {'type': 'number'};
-  if (type.isDartCoreBool) return {'type': 'boolean'};
-  if (_enumOf(type) case final enumElement?) {
-    // Enums travel as their value names, e.g. "celsius".
-    return {
-      'type': 'string',
-      'enum': [for (final value in enumElement.constants) value.displayName],
-    };
+/// The schema properties, required names and call arguments for a list of
+/// parameters.
+typedef _Parameters = ({
+  Map<String, Object?> properties,
+  List<String> required,
+  String arguments,
+});
+
+/// Maps Dart types to JSON schemas, and JSON values back to Dart code.
+///
+/// Used for the tool's own parameters and, recursively, for the constructor
+/// parameters of class-typed parameters.
+class _TypeMapper {
+  _TypeMapper(this.library);
+
+  /// The library the generated code is a part of.
+  final LibraryElement library;
+
+  /// Classes being mapped right now, to catch classes that contain themselves.
+  final _inProgress = <ClassElement>{};
+
+  /// The schema and call arguments for [params], whose JSON values are read
+  /// from the map expression [map]. [path] prefixes names in error messages.
+  _Parameters parameters(
+    List<FormalParameterElement> params, {
+    required String map,
+    required String path,
+  }) {
+    final properties = <String, Object?>{};
+    final required = <String>[];
+    final positional = <String>[];
+    final named = <String>[];
+
+    for (final param in params) {
+      final name = param.displayName;
+      final paramPath = path.isEmpty ? name : '$path.$name';
+      final description = _paramDescription(param) ?? _fieldDescription(param);
+      properties[name] = {
+        ...schemaFor(param.type, paramPath, param),
+        'description': ?description,
+      };
+
+      // Required in the schema = no default value and can't be null.
+      final isNullable =
+          param.type.nullabilitySuffix == NullabilitySuffix.question;
+      final isRequired = !param.hasDefaultValue && !isNullable;
+      if (isRequired) required.add(name);
+
+      final value = '$map[${_literal(name)}]';
+      var code = isRequired
+          ? convert(value, param.type)
+          : _convertNullable(value, param.type);
+      if (param.hasDefaultValue) {
+        code = '$code ?? ${_defaultValue(param, paramPath)}';
+      }
+      if (param.isNamed) {
+        named.add('$name: $code');
+      } else {
+        positional.add(code);
+      }
+    }
+    return (
+      properties: properties,
+      required: required,
+      arguments: [...positional, ...named].join(', '),
+    );
   }
-  if (_listItemType(type) case final itemType?) {
-    // Items can't be null: LLMs rarely need it, and it keeps schemas simple.
-    if (itemType.nullabilitySuffix == NullabilitySuffix.question) return null;
-    final itemSchema = _typeSchema(itemType);
-    if (itemSchema == null) return null;
-    return {'type': 'array', 'items': itemSchema};
+
+  /// The JSON Schema for [type], without a description.
+  ///
+  /// [path] and [at] point error messages at the right parameter or field.
+  /// [shown] is the type to name in errors (the whole list, for list items).
+  Map<String, Object?> schemaFor(
+    DartType type,
+    String path,
+    Element at, {
+    DartType? shown,
+  }) {
+    Never fail(String problem) => throw InvalidGenerationSource(
+      '${path.contains('.') ? 'Field' : 'Parameter'} "$path" has type '
+      '${(shown ?? type).getDisplayString()}, $problem',
+      element: at,
+    );
+
+    if (type.isDartCoreString) return {'type': 'string'};
+    if (type.isDartCoreInt) return {'type': 'integer'};
+    if (type.isDartCoreDouble || type.isDartCoreNum) return {'type': 'number'};
+    if (type.isDartCoreBool) return {'type': 'boolean'};
+    if (_enumOf(type) case final enumElement?) {
+      // Enums travel as their value names, e.g. "celsius".
+      return {
+        'type': 'string',
+        'enum': [for (final value in enumElement.constants) value.displayName],
+      };
+    }
+    if (_listItemType(type) case final itemType?) {
+      // Items can't be null: LLMs rarely need it, and it keeps schemas simple.
+      if (itemType.nullabilitySuffix == NullabilitySuffix.question) {
+        fail(
+          'but list items can\'t be nullable. Remove the "?" from the '
+          'item type.',
+        );
+      }
+      return {
+        'type': 'array',
+        'items': schemaFor(itemType, path, at, shown: shown ?? type),
+      };
+    }
+    if (_classOf(type) case final classElement?) {
+      final constructor = classElement.unnamedConstructor;
+      if (classElement.typeParameters.isNotEmpty) {
+        fail('which is generic. Generic classes are not supported yet.');
+      }
+      if (constructor == null) {
+        fail(
+          'which has no unnamed constructor, e.g. '
+          '${classElement.displayName}({...}). Add one so it can be built '
+          'from the LLM\'s JSON.',
+        );
+      }
+      if (classElement.isAbstract && !constructor.isFactory) {
+        fail(
+          'which is abstract. Use a concrete class, or give it an '
+          'unnamed factory constructor.',
+        );
+      }
+      if (!_inProgress.add(classElement)) {
+        fail('which contains itself. Recursive classes are not supported.');
+      }
+      try {
+        final fields = parameters(
+          constructor.formalParameters,
+          map: 'json',
+          path: path,
+        );
+        final description = _cleanDocComment(classElement.documentationComment);
+        return {
+          'type': 'object',
+          if (description != null && description.isNotEmpty)
+            'description': description,
+          'properties': fields.properties,
+          'required': fields.required,
+          'additionalProperties': false,
+        };
+      } finally {
+        _inProgress.remove(classElement);
+      }
+    }
+    fail(
+      'which is not supported yet. Use String, int, double, num, bool, an '
+      'enum, a class, or a List of these.',
+    );
   }
-  return null;
+
+  /// Code that converts [value], a non-null JSON value, to [type].
+  ///
+  /// Only called for types that [schemaFor] accepted.
+  String convert(String value, DartType type) {
+    // JSON has no int/double difference: 5 can arrive as int and 5.0 as
+    // double, so read as num and convert.
+    if (type.isDartCoreDouble) return '($value as num).toDouble()';
+    if (type.isDartCoreInt) return '($value as num).toInt()';
+    if (type.isDartCoreString) return '$value as String';
+    if (type.isDartCoreBool) return '$value as bool';
+    if (type.isDartCoreNum) return '$value as num';
+    if (_enumOf(type) case final enumElement?) {
+      return '${_referenceTo(enumElement, library)}.values.byName('
+          '$value as String)';
+    }
+    if (_listItemType(type) case final itemType?) {
+      // `e` may shadow an outer `e` in nested lists, which Dart allows.
+      return '($value as List).map((e) => ${convert('e', itemType)})'
+          '.toList()';
+    }
+    if (_classOf(type) case final classElement?) {
+      // Cast once and bind it: repeating `(e as Map)` per field would make
+      // later casts "unnecessary" warnings in the user's project.
+      final fields = parameters(
+        classElement.unnamedConstructor!.formalParameters,
+        map: 'json',
+        path: '',
+      );
+      return '((Map json) => '
+          '${_referenceTo(classElement, library)}(${fields.arguments}))'
+          '($value as Map)';
+    }
+    throw StateError('Unsupported type: ${type.getDisplayString()}');
+  }
+
+  /// Like [convert], but [value] may be null.
+  String _convertNullable(String value, DartType type) {
+    // Short forms for simple types keep the generated code readable.
+    if (type.isDartCoreDouble) return '($value as num?)?.toDouble()';
+    if (type.isDartCoreInt) return '($value as num?)?.toInt()';
+    if (type.isDartCoreString) return '$value as String?';
+    if (type.isDartCoreBool) return '$value as bool?';
+    if (type.isDartCoreNum) return '$value as num?';
+    // Parenthesized so a following `?? default` applies to the whole thing.
+    return '($value == null ? null : ${convert(value, type)})';
+  }
+
+  /// Code for [param]'s default value that works inside [library].
+  String _defaultValue(FormalParameterElement param, String path) {
+    // Written in the same library, the source code works as-is.
+    if (param.library == library) return param.defaultValueCode!;
+
+    // From another library, the source may use names that aren't visible
+    // here (private constants, prefixed imports), so rebuild the value.
+    final code = _constantCode(param.computeConstantValue());
+    if (code != null) return code;
+    throw InvalidGenerationSource(
+      'Field "$path" has a default value that can\'t be copied into the '
+      'generated code. Use a literal, an enum value or a const list of '
+      'those, or make the field nullable or required.',
+      element: param,
+    );
+  }
+
+  /// Dart code for a constant, or null if it can't be written as a literal.
+  String? _constantCode(DartObject? value) {
+    if (value == null) return null;
+    if (value.isNull) return 'null';
+    if (value.toBoolValue() case final bool b) return '$b';
+    if (value.toIntValue() case final int i) return '$i';
+    if (value.toDoubleValue() case final double d) {
+      return d.isFinite ? '$d' : null;
+    }
+    if (value.toStringValue() case final String s) return _literal(s);
+    if (value.type case final type? when _enumOf(type) != null) {
+      final name = value.variable?.displayName;
+      return name == null
+          ? null
+          : '${_referenceTo(type.element!, library)}.$name';
+    }
+    if (value.toListValue() case final items?) {
+      final codes = [for (final item in items) _constantCode(item)];
+      if (codes.contains(null)) return null;
+      return 'const [${codes.join(', ')}]';
+    }
+    return null;
+  }
 }
 
 EnumElement? _enumOf(DartType type) => switch (type) {
   InterfaceType(element: final EnumElement element) => element,
   _ => null,
 };
+
+/// The class for a class type we can build from JSON, otherwise null.
+///
+/// SDK classes like DateTime are excluded: their constructors don't take
+/// JSON-shaped values.
+ClassElement? _classOf(DartType type) => switch (type) {
+  InterfaceType(element: final ClassElement element)
+      when !element.library.isInSdk =>
+    element,
+  _ => null,
+};
+
+/// The doc comment of the field behind a `this.name` parameter, if any.
+String? _fieldDescription(FormalParameterElement param) {
+  if (param is! FieldFormalParameterElement) return null;
+  final description = _cleanDocComment(param.field?.documentationComment);
+  return description == null || description.isEmpty ? null : description;
+}
 
 /// `T` for a `List<T>`, otherwise null.
 DartType? _listItemType(DartType type) =>
@@ -210,49 +408,6 @@ String _referenceTo(Element element, LibraryElement library) {
     prefixed ??= '$prefix.$name';
   }
   return prefixed ?? name;
-}
-
-/// Code that reads one argument from the AI's map and casts it.
-String _readArg(
-  String name,
-  DartType type, {
-  required bool nullable,
-  required LibraryElement library,
-}) {
-  final value = 'args[${_literal(name)}]';
-  if (!nullable) return _convert(value, type, library);
-
-  // Short forms for simple types keep the generated code readable.
-  if (type.isDartCoreDouble) return '($value as num?)?.toDouble()';
-  if (type.isDartCoreInt) return '($value as num?)?.toInt()';
-  if (type.isDartCoreString) return '$value as String?';
-  if (type.isDartCoreBool) return '$value as bool?';
-  if (type.isDartCoreNum) return '$value as num?';
-  // Parenthesized so a following `?? default` applies to the whole thing.
-  return '($value == null ? null : ${_convert(value, type, library)})';
-}
-
-/// Code that converts [value], a non-null JSON value, to [type].
-///
-/// Only called for types that [_typeSchema] accepted.
-String _convert(String value, DartType type, LibraryElement library) {
-  // JSON has no int/double difference: 5 can arrive as int and 5.0 as
-  // double, so read as num and convert.
-  if (type.isDartCoreDouble) return '($value as num).toDouble()';
-  if (type.isDartCoreInt) return '($value as num).toInt()';
-  if (type.isDartCoreString) return '$value as String';
-  if (type.isDartCoreBool) return '$value as bool';
-  if (type.isDartCoreNum) return '$value as num';
-  if (_enumOf(type) case final enumElement?) {
-    return '${_referenceTo(enumElement, library)}.values.byName('
-        '$value as String)';
-  }
-  if (_listItemType(type) case final itemType?) {
-    // `e` may shadow an outer `e` in nested lists, which Dart allows.
-    return '($value as List).map((e) => ${_convert('e', itemType, library)})'
-        '.toList()';
-  }
-  throw StateError('Unsupported type: ${type.getDisplayString()}');
 }
 
 /// Reads the text from @Param('...') on a parameter, if present.

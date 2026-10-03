@@ -95,3 +95,73 @@ final averageTemperatureTool = ToolDefinition(
               .toList()),
   ),
 );
+
+final bookFlightTool = ToolDefinition(
+  name: "bookFlight",
+  description: "Books a flight and returns a confirmation summary.",
+  parametersSchema: {
+    "type": "object",
+    "properties": {
+      "booking": {
+        "type": "object",
+        "description": "One flight booking request.",
+        "properties": {
+          "from": {
+            "type": "string",
+            "description": "Departure airport code, e.g. DEL.",
+          },
+          "to": {
+            "type": "string",
+            "description": "Arrival airport code, e.g. BOM.",
+          },
+          "passengers": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "description": "A person on the flight.",
+              "properties": {
+                "name": {
+                  "type": "string",
+                  "description": "Full name as on the passport.",
+                },
+                "age": {"type": "integer"},
+                "bags": {"type": "integer", "description": "Checked bags."},
+              },
+              "required": ["name", "age"],
+              "additionalProperties": false,
+            },
+          },
+          "cabin": {
+            "type": "string",
+            "enum": ["economy", "business"],
+          },
+        },
+        "required": ["from", "to", "passengers"],
+        "additionalProperties": false,
+      },
+    },
+    "required": ["booking"],
+    "additionalProperties": false,
+  },
+  requiresConfirmation: true,
+  execute: (args) => bookFlight(
+    ((Map json) => models.Booking(
+      from: json["from"] as String,
+      to: json["to"] as String,
+      passengers: (json["passengers"] as List)
+          .map(
+            (e) => ((Map json) => models.Passenger(
+              name: json["name"] as String,
+              age: (json["age"] as num).toInt(),
+              bags: (json["bags"] as num?)?.toInt() ?? 1,
+            ))(e as Map),
+          )
+          .toList(),
+      cabin:
+          (json["cabin"] == null
+              ? null
+              : models.Cabin.values.byName(json["cabin"] as String)) ??
+          models.Cabin.economy,
+    ))(args["booking"] as Map),
+  ),
+);

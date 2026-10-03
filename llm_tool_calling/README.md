@@ -165,7 +165,8 @@ even when you set a custom `name`.
 | `num` | `"number"` | |
 | `bool` | `"boolean"` | |
 | any `enum` | `"string"` with `"enum": [...]` | Sent as value names, e.g. `"celsius"`. |
-| `List<T>` of any type above | `"array"` with `"items": {...}` | Includes lists of enums and nested lists. Items can't be nullable. |
+| your own classes | `"object"` with `"properties": {...}` | See [Class parameters](#class-parameters). |
+| `List<T>` of any type above | `"array"` with `"items": {...}` | Includes lists of enums, classes and lists. Items can't be nullable. |
 
 Parameters can be positional or named, and any of them can be nullable or
 have a default value:
@@ -179,8 +180,41 @@ have a default value:
 Functions can return anything, including `Future<T>` and `void` (`void`
 tools return `null`).
 
-Custom classes, `Map`, `Set` and `DateTime` are not supported yet; see the
-[roadmap](#roadmap). Using them is a build-time error, not a silent bug.
+`Map`, `Set`, `DateTime` and generic classes are not supported yet. Using
+them is a build-time error, not a silent bug.
+
+### Class parameters
+
+A class parameter becomes a nested object schema, built from the class's
+**unnamed constructor**: each constructor parameter is a field, with the same
+rules as tool parameters (types, required, nullable, defaults).
+
+```dart
+/// A person on the flight.
+class Passenger {
+  Passenger({required this.name, required this.age, this.bags = 1});
+
+  /// Full name as on the passport.
+  final String name;
+  final int age;
+  final int bags;
+}
+
+/// Books a flight.
+@Tool(requiresConfirmation: true)
+String bookFlight(List<Passenger> passengers, String from, String to) => '...';
+```
+
+- **Descriptions** come from `@Param('...')` on the constructor parameter,
+  or the field's `///` doc comment for `this.name` parameters. The class's
+  doc comment describes the object, unless the tool parameter has `@Param`.
+- **Defaults** like `this.bags = 1` work. For classes in another file, the
+  default must be a literal, an enum value or a const list of those;
+  otherwise you get a build error explaining how to fix it.
+- **freezed classes** work: their unnamed `factory` constructor is used.
+- Classes can contain other classes, enums and lists. A class can't contain
+  itself (e.g. a linked-list `Node`); that's a build-time error.
+- Classes from a prefixed import (`import 'models.dart' as models;`) work.
 
 ## Validation and errors
 
@@ -194,6 +228,7 @@ Custom classes, `Map`, `Set` and `DateTime` are not supported yet; see the
 | Wrong JSON type | `city must be a string, got integer` |
 | Value not in an enum | `unit must be one of "celsius", "fahrenheit", got "kelvin"` |
 | Wrong list item (every one is checked) | `tags[2] must be a string, got integer` |
+| Problem inside an object | `booking.passengers[0].age is required`, `passenger.seat is not a known field` |
 
 If anything is wrong, your function does not run and a
 `ToolArgumentException` is thrown. Its `toString()` is written for the LLM:
@@ -246,9 +281,22 @@ Good to know:
   contain `$`.
 
 **`Parameter "x" has type ..., which is not supported yet`**
-- Use `String`, `int`, `double`, `num`, `bool`, an enum, or a `List` of
-  these (items can't be nullable: use `List<String>`, not `List<String?>`); see
-  [Supported types](#supported-types).
+- Use `String`, `int`, `double`, `num`, `bool`, an enum, your own class, or a
+  `List` of these; see [Supported types](#supported-types). The same message
+  starts with `Field "passenger.birthday"` when it's a field of a class.
+
+**`... but list items can't be nullable`**
+- Use `List<String>` instead of `List<String?>`. The whole list can still be
+  nullable: `List<String>?`.
+
+**`... which has no unnamed constructor` / `... which is abstract` / `... which contains itself`**
+- Class parameters are built through the class's unnamed constructor. See
+  [Class parameters](#class-parameters).
+
+**`Field "..." has a default value that can't be copied into the generated code`**
+- The class is in another file and its default isn't a literal, an enum
+  value or a const list of those. Make the field nullable or required, or use
+  a simpler default.
 
 **`Conflicting outputs were detected`**
 - Run `dart run build_runner build --delete-conflicting-outputs`.
@@ -258,7 +306,6 @@ All of them write into the same shared `.g.dart` part.
 
 ## Roadmap
 
-- Custom class parameters (nested object schemas).
 - A generated list of all tools in a file, e.g. `allTools`.
 - Ready-made tool objects and schemas for popular SDKs such as `llm_sdk`,
   `flutter_ai_tools` and `firebase_ai`.

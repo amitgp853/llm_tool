@@ -1,5 +1,7 @@
 ## Unreleased
 
+- `validateArguments()` checks nested objects (fields with `properties`),
+  reporting paths like `booking.passengers[0].age is required`.
 - `validateArguments()` checks every item of an `array` against `items`,
   reporting paths like `tags[2]` and `grid[1][0]`.
 - `validateArguments()` checks `enum` lists and reports the allowed values,

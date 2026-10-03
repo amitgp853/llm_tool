@@ -75,10 +75,14 @@ final getWeatherTool = ToolDefinition(
 ## Supported
 
 - Top-level functions: sync, async (`Future<T>`) and `void`.
-- `String`, `int`, `double`, `num`, `bool`, enum and `List` parameters
-  (lists of any of these, including nested lists): positional or
+- `String`, `int`, `double`, `num`, `bool`, enum, class and `List`
+  parameters (lists of any of these, including nested lists): positional or
   named, nullable or not, with or without defaults.
 - Descriptions from `@Tool(description: ...)` or the doc comment.
+
+- Class parameters become nested object schemas, built through the class's
+  unnamed constructor. freezed classes work too. See
+  [Class parameters](https://pub.dev/packages/llm_tool_calling#class-parameters).
 
 Anything else is a **build-time error** with a message explaining the fix:
 unsupported types, missing descriptions, tool names that LLM providers would

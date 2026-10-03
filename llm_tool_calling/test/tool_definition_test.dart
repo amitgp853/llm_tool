@@ -235,6 +235,81 @@ void main() {
       });
     });
 
+    group('nested objects', () {
+      final passenger = {
+        'type': 'object',
+        'properties': {
+          'name': {'type': 'string'},
+          'age': {'type': 'integer'},
+          'nickname': {'type': 'string'},
+        },
+        'required': ['name', 'age'],
+        'additionalProperties': false,
+      };
+      final schema = {
+        'type': 'object',
+        'properties': {
+          'passenger': passenger,
+          'group': {'type': 'array', 'items': passenger},
+        },
+      };
+
+      test('accepts a valid object, optional fields can be missing', () {
+        expect(
+          validateArguments(schema, {
+            'passenger': {'name': 'Asha', 'age': 30},
+          }),
+          isEmpty,
+        );
+      });
+
+      test('reports missing, unknown and wrong fields with their path', () {
+        expect(
+          validateArguments(schema, {
+            'passenger': {'age': 'thirty', 'seat': '4A'},
+          }),
+          [
+            'passenger.name is required',
+            'passenger.age must be an integer, got string',
+            'passenger.seat is not a known field',
+          ],
+        );
+      });
+
+      test('null for a required field is reported, for optional is fine', () {
+        expect(
+          validateArguments(schema, {
+            'passenger': {'name': null, 'age': 3, 'nickname': null},
+          }),
+          ['passenger.name is required'],
+        );
+      });
+
+      test('objects inside lists report index and field', () {
+        expect(
+          validateArguments(schema, {
+            'group': [
+              {'name': 'Asha', 'age': 30},
+              {'name': 'Ravi'},
+            ],
+          }),
+          ['group[1].age is required'],
+        );
+      });
+
+      test('not an object is a type error, fields are not checked', () {
+        expect(validateArguments(schema, {'passenger': 'Asha'}), [
+          'passenger must be an object, got string',
+        ]);
+      });
+
+      test('top-level messages are unchanged', () {
+        expect(validateArguments(schema, {'seat': '4A'}), [
+          'seat is not a known argument',
+        ]);
+      });
+    });
+
     test('malformed property schema does not crash', () {
       final badSchema = {
         'type': 'object',

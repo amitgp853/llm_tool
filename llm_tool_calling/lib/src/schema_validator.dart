@@ -5,26 +5,47 @@ List<String> validateArguments(
   Map<String, Object?> args,
 ) {
   final errors = <String>[];
-  final properties =
-      (schema['properties'] as Map?)?.cast<String, Object?>() ?? const {};
-  final required = (schema['required'] as List?)?.cast<String>() ?? const [];
+  _checkObject('', args, schema, errors);
+  return errors;
+}
 
-  // 1. Every required argument must be present.
+/// Checks the fields of [object] against an object [schema]. [path] is empty
+/// for the top-level arguments, or e.g. `passenger` for a nested object.
+void _checkObject(
+  String path,
+  Map<Object?, Object?> object,
+  Map<Object?, Object?> schema,
+  List<String> errors,
+) {
+  final properties = switch (schema['properties']) {
+    final Map<Object?, Object?> map => map,
+    _ => const <Object?, Object?>{},
+  };
+  final required = switch (schema['required']) {
+    final List<Object?> list => list,
+    _ => const <Object?>[],
+  };
+  String pathOf(Object? key) => path.isEmpty ? '$key' : '$path.$key';
+
+  // 1. Every required field must be present.
   for (final name in required) {
-    if (args[name] == null) errors.add('$name is required');
+    if (object[name] == null) errors.add('${pathOf(name)} is required');
   }
 
-  // 2. Every sent argument must be known and have the right type.
-  for (final MapEntry(:key, :value) in args.entries) {
+  // 2. Every sent field must be known and have the right type.
+  for (final MapEntry(:key, :value) in object.entries) {
     final property = properties[key];
     if (property == null) {
-      errors.add('$key is not a known argument');
+      errors.add(
+        path.isEmpty
+            ? '$key is not a known argument'
+            : '${pathOf(key)} is not a known field',
+      );
       continue;
     }
     if (value == null) continue; // already reported above if required
-    _checkValue(key, value, property, errors);
+    _checkValue(pathOf(key), value, property, errors);
   }
-  return errors;
 }
 
 /// Checks one [value] against its [schema], adding problems to [errors].
@@ -60,6 +81,9 @@ void _checkValue(
     for (final (index, item) in value.indexed) {
       _checkValue('$path[$index]', item, schema['items'], errors);
     }
+  }
+  if (value is Map && schema['properties'] is Map) {
+    _checkObject(path, value, schema, errors);
   }
 }
 

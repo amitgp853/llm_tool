@@ -97,4 +97,52 @@ void main() {
       );
     });
   });
+
+  group('bookFlight (classes)', () {
+    Future<Object?> callWithJson(String json) =>
+        bookFlightTool(jsonDecode(json) as Map<String, Object?>);
+
+    test('builds nested objects and fills in defaults', () async {
+      expect(
+        await callWithJson('''
+          {"booking": {
+            "from": "DEL", "to": "BOM",
+            "passengers": [
+              {"name": "Asha", "age": 30},
+              {"name": "Ravi", "age": 8, "bags": 0}
+            ]
+          }}'''),
+        'DEL->BOM, economy: Asha (1 bags), Ravi (0 bags)',
+      );
+    });
+
+    test('reports nested problems with full paths', () async {
+      await expectLater(
+        () => callWithJson('''
+          {"booking": {
+            "from": "DEL",
+            "cabin": "first",
+            "passengers": [{"name": "Asha", "age": "30", "seat": "4A"}]
+          }}'''),
+        throwsA(
+          isA<ToolArgumentException>().having((e) => e.errors, 'errors', [
+            // Required fields first, then the sent fields in JSON order.
+            'booking.to is required',
+            'booking.cabin must be one of "economy", "business", got "first"',
+            'booking.passengers[0].age must be an integer, got string',
+            'booking.passengers[0].seat is not a known field',
+          ]),
+        ),
+      );
+    });
+
+    test('schema documents the fields for the LLM', () {
+      final booking =
+          (bookFlightTool.parametersSchema['properties'] as Map)['booking']
+              as Map;
+      expect(booking['description'], 'One flight booking request.');
+      expect(booking['required'], ['from', 'to', 'passengers']);
+      expect(bookFlightTool.requiresConfirmation, isTrue);
+    });
+  });
 }

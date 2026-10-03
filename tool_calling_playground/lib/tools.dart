@@ -1,5 +1,7 @@
 import 'package:llm_tool_calling/llm_tool_calling.dart';
 
+import 'models.dart' as models;
+
 part 'tools.g.dart';
 
 /// Gets the current weather for a city.
@@ -42,4 +44,12 @@ double averageTemperature(
       convertTemperature(value, units?[i] ?? TemperatureUnit.celsius),
   ];
   return celsius.reduce((a, b) => a + b) / celsius.length;
+}
+
+/// Books a flight and returns a confirmation summary.
+@Tool(requiresConfirmation: true)
+String bookFlight(models.Booking booking) {
+  final names = booking.passengers.map((p) => '${p.name} (${p.bags} bags)');
+  return '${booking.from}->${booking.to}, ${booking.cabin.name}: '
+      '${names.join(', ')}';
 }

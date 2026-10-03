@@ -468,6 +468,388 @@ void f({List<String> tags = const ['a']}) {}
     });
   });
 
+  group('classes', () {
+    const passenger = '''
+/// A person on the flight.
+class Passenger {
+  Passenger({required this.name, required this.age, this.nickname});
+
+  /// Full name as on the passport.
+  final String name;
+  final int age;
+  final String? nickname;
+}
+
+''';
+
+    test('become a nested object schema', () async {
+      final output = await _generate('''
+$passenger/// Doc.
+@Tool()
+void book(Passenger passenger) {}
+''');
+      expect(
+        _withoutSpaces(output),
+        contains(
+          '"passenger":{"type":"object",'
+          '"description":"Apersonontheflight.",'
+          '"properties":{'
+          '"name":{"type":"string","description":"Fullnameasonthepassport."},'
+          '"age":{"type":"integer"},'
+          '"nickname":{"type":"string"}},'
+          '"required":["name","age"],'
+          '"additionalProperties":false}',
+        ),
+      );
+      expect(
+        _withoutSpaces(output),
+        contains(
+          'book(((Mapjson)=>Passenger('
+          'name:json["name"]asString,'
+          'age:(json["age"]asnum).toInt(),'
+          'nickname:json["nickname"]asString?))'
+          '(args["passenger"]asMap))',
+        ),
+      );
+    });
+
+    test('@Param on the tool parameter replaces the class doc', () async {
+      final output = await _generate('''
+$passenger/// Doc.
+@Tool()
+void book(@Param('Who is flying') Passenger passenger) {}
+''');
+      expect(output, contains('"description": "Who is flying"'));
+      expect(output, isNot(contains('A person on the flight.')));
+    });
+
+    test('@Param on a constructor parameter describes the field', () async {
+      final output = await _generate('''
+class Seat {
+  Seat(@Param('Row number') this.row);
+  final int row;
+}
+
+/// Doc.
+@Tool()
+void f(Seat seat) {}
+''');
+      expect(output, contains('"description": "Row number"'));
+      expect(
+        _withoutSpaces(output),
+        contains(
+          '((Mapjson)=>Seat((json["row"]asnum).toInt()))(args["seat"]asMap)',
+        ),
+      );
+    });
+
+    test('nullable class parameter stays null when missing', () async {
+      final output = await _generate('''
+$passenger/// Doc.
+@Tool()
+void book({Passenger? passenger}) {}
+''');
+      expect(output, contains('"required": []'));
+      expect(
+        _withoutSpaces(output),
+        contains(
+          'passenger:(args["passenger"]==null?null:((Mapjson)=>Passenger(',
+        ),
+      );
+    });
+
+    test('field defaults from the same file are used', () async {
+      final output = await _generate('''
+enum Cabin { economy, business }
+
+class Booking {
+  Booking({this.cabin = Cabin.economy, this.bags = 1});
+  final Cabin cabin;
+  final int bags;
+}
+
+/// Doc.
+@Tool()
+void f(Booking booking) {}
+''');
+      final code = _withoutSpaces(output);
+      expect(code, contains('"required":[]'));
+      expect(code, contains('??Cabin.economy'));
+      expect(code, contains('.toInt()??1'));
+    });
+
+    test('list of classes', () async {
+      final output = await _generate('''
+$passenger/// Doc.
+@Tool()
+void book(List<Passenger> group) {}
+''');
+      final code = _withoutSpaces(output);
+      expect(
+        code,
+        contains('"group":{"type":"array","items":{"type":"object"'),
+      );
+      expect(
+        code,
+        contains(
+          '(args["group"]asList).map((e)=>((Mapjson)=>Passenger(name:json["name"]asString',
+        ),
+      );
+    });
+
+    test('classes inside classes, with enums and lists', () async {
+      final output = await _generate('''
+enum Meal { veg, nonVeg }
+
+class Address {
+  Address({required this.city});
+  final String city;
+}
+
+class Traveller {
+  Traveller({required this.address, required this.meals});
+  final Address address;
+  final List<Meal> meals;
+}
+
+/// Doc.
+@Tool()
+void f(Traveller traveller) {}
+''');
+      final code = _withoutSpaces(output);
+      expect(
+        code,
+        contains(
+          '"address":{"type":"object","properties":{"city":{"type":"string"}}',
+        ),
+      );
+      expect(
+        code,
+        contains(
+          'Traveller(address:((Mapjson)=>Address(city:json["city"]asString))(json["address"]asMap)',
+        ),
+      );
+      expect(code, contains('Meal.values.byName(easString)'));
+    });
+
+    test('freezed-style class with a factory constructor', () async {
+      final output = await _generate('''
+abstract class Point {
+  const factory Point({required int x, required int y}) = _Point;
+}
+
+class _Point implements Point {
+  const _Point({required this.x, required this.y});
+  final int x;
+  final int y;
+}
+
+/// Doc.
+@Tool()
+void f(Point point) {}
+''');
+      expect(_withoutSpaces(output), contains('f(((Mapjson)=>Point(x:'));
+    });
+
+    group('from another file', () {
+      const models = {
+        'a|lib/models.dart': '''
+enum Seat { aisle, window }
+
+const _defaultBags = 2;
+
+class Booking {
+  Booking({
+    this.seat = Seat.window,
+    this.bags = _defaultBags,
+    this.note = 'none',
+    this.tags = const ['vip'],
+    this.ratio = 0.5,
+  });
+  final Seat seat;
+  final int bags;
+  final String note;
+  final List<String> tags;
+  final double ratio;
+}
+''',
+      };
+
+      test('defaults are rebuilt, with the import prefix', () async {
+        final output = await _generate(
+          '/// Doc.\n@Tool()\nvoid f(m.Booking booking) {}\n',
+          extraSources: models,
+          header:
+              "import 'package:llm_tool_calling/llm_tool_calling.dart';\n"
+              "import 'models.dart' as m;\n\n"
+              "part 'tools.g.dart';\n\n",
+        );
+        final code = _withoutSpaces(output);
+        expect(code, contains('f(((Mapjson)=>m.Booking('));
+        expect(code, contains('??m.Seat.window'));
+        // The private constant's value, not its name:
+        expect(code, contains('.toInt()??2'));
+        expect(code, isNot(contains('_defaultBags')));
+        expect(code, contains('??"none"'));
+        expect(code, contains('??const["vip"]'));
+        expect(code, contains('??0.5'));
+      });
+
+      test('a default that is not a literal is a clear error', () async {
+        final result = await _build(
+          "import 'package:llm_tool_calling/llm_tool_calling.dart';\n"
+          "import 'trip.dart';\n\n"
+          "part 'tools.g.dart';\n\n"
+          '/// Doc.\n@Tool()\nvoid f(Trip trip) {}\n',
+          extraSources: {
+            'a|lib/trip.dart': '''
+class Stop {
+  const Stop({required this.city});
+  final String city;
+}
+
+class Trip {
+  Trip({this.start = const Stop(city: 'Kanpur')});
+  final Stop start;
+}
+''',
+          },
+        );
+        expect(result.succeeded, isFalse);
+        expect(
+          result.errors.join('\n'),
+          contains(
+            'Field "trip.start" has a default value that can\'t be copied',
+          ),
+        );
+      });
+    });
+
+    group('errors', () {
+      test('unsupported field type names the field path', () async {
+        expect(
+          await _buildErrors('''
+class Person {
+  Person({required this.birthday});
+  final DateTime birthday;
+}
+
+/// Doc.
+@Tool()
+void f(Person person) {}
+'''),
+          contains(
+            'Field "person.birthday" has type DateTime, which is not '
+            'supported yet.',
+          ),
+        );
+      });
+
+      test('generic class', () async {
+        expect(
+          await _buildErrors('''
+class Box<T> {
+  Box(this.value);
+  final T value;
+}
+
+/// Doc.
+@Tool()
+void f(Box<int> box) {}
+'''),
+          contains('which is generic.'),
+        );
+      });
+
+      test('class without an unnamed constructor', () async {
+        expect(
+          await _buildErrors('''
+class Point {
+  Point.origin();
+}
+
+/// Doc.
+@Tool()
+void f(Point point) {}
+'''),
+          contains('which has no unnamed constructor'),
+        );
+      });
+
+      test('abstract class without a factory constructor', () async {
+        expect(
+          await _buildErrors('''
+abstract class Shape {
+  Shape();
+}
+
+/// Doc.
+@Tool()
+void f(Shape shape) {}
+'''),
+          contains('which is abstract.'),
+        );
+      });
+
+      test('class that contains itself', () async {
+        expect(
+          await _buildErrors('''
+class Node {
+  Node({this.next});
+  final Node? next;
+}
+
+/// Doc.
+@Tool()
+void f(Node node) {}
+'''),
+          contains('Field "node.next" has type Node?, which contains itself.'),
+        );
+      });
+
+      test('classes that contain each other', () async {
+        expect(
+          await _buildErrors('''
+class A {
+  A({this.b});
+  final B? b;
+}
+
+class B {
+  B({this.a});
+  final A? a;
+}
+
+/// Doc.
+@Tool()
+void f(A a) {}
+'''),
+          contains('Field "a.b.a" has type A?, which contains itself.'),
+        );
+      });
+
+      test('the same class twice is fine (not recursion)', () async {
+        final output = await _generate('''
+class Point {
+  Point({required this.x});
+  final int x;
+}
+
+class Line {
+  Line({required this.from, required this.to});
+  final Point from;
+  final Point to;
+}
+
+/// Doc.
+@Tool()
+void f(Line line, Point extra) {}
+''');
+        expect(output, contains('Line('));
+      });
+    });
+  });
+
   group('return types', () {
     test('void function returns null', () async {
       final output = await _generate('''
@@ -746,8 +1128,21 @@ void get$weather() {}
       );
     });
 
+    test('nullable list items explain how to fix it', () async {
+      expect(
+        await _buildErrors('''
+/// Doc.
+@Tool()
+void f(List<String?> x) {}
+'''),
+        contains(
+          'Parameter "x" has type List<String?>, but list items can\'t be '
+          'nullable.',
+        ),
+      );
+    });
+
     for (final type in [
-      'List<String?>',
       'List<dynamic>',
       'List<DateTime>',
       'List<List<Object>>',
@@ -843,7 +1238,8 @@ Future<String> _buildErrors(String tools) async {
   return result.errors.join('\n');
 }
 
-/// Analyzer errors for [source] combined with its [generated] part.
+/// Analyzer errors and warnings for [source] combined with its [generated]
+/// part. Generated code must not cause warnings in users' projects.
 Future<List<String>> _compileErrors(
   String source,
   String generated,
@@ -863,7 +1259,7 @@ Future<List<String>> _compileErrors(
     return [
       for (final unit in resolved.units)
         for (final diagnostic in unit.diagnostics)
-          if (diagnostic.severity == Severity.error) diagnostic.message,
+          if (diagnostic.severity != Severity.info) diagnostic.message,
     ];
   },
   rootPackage: 'a',
