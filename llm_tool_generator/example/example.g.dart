@@ -34,13 +34,19 @@ final convertCurrencyTool = ToolDefinition(
   parametersSchema: {
     "type": "object",
     "properties": {
-      "amount": {"type": "number", "description": "Amount to convert"},
+      "amount": {
+        "type": "number",
+        "minimum": 0,
+        "description": "Amount to convert",
+      },
       "from": {
         "type": "string",
+        "pattern": "^[A-Z]{3}\$",
         "description": "ISO code to convert from, e.g. USD",
       },
       "to": {
         "type": "string",
+        "pattern": "^[A-Z]{3}\$",
         "description": "ISO code to convert to, e.g. INR",
       },
     },
@@ -55,24 +61,48 @@ final convertCurrencyTool = ToolDefinition(
   ),
 );
 
-final deleteFileTool = ToolDefinition(
-  name: "deleteFile",
-  description: "Deletes a file from the user's device.",
-  parametersSchema: {
-    "type": "object",
-    "properties": {
-      "path": {"type": "string", "description": "Path of the file to delete"},
-    },
-    "required": ["path"],
-    "additionalProperties": false,
-  },
-  requiresConfirmation: true,
-  execute: (args) {
-    deleteFile(args["path"] as String);
-    return null;
-  },
-);
-
 /// Every tool in this file, e.g. to send to an LLM or look up by name.
 /// Typed by the tools' common return type, so calling one needs no cast.
-final exampleTools = [getWeatherTool, convertCurrencyTool, deleteFileTool];
+final exampleTools = [getWeatherTool, convertCurrencyTool];
+
+/// The @LlmTool methods of [NoteTools] as tools.
+extension NoteToolsLlmTools on NoteTools {
+  /// Every tool of this [NoteTools], bound to this instance, e.g. to send
+  /// to an LLM or look up by name.
+  List<ToolDefinition<String?>> get llmTools => [
+    ToolDefinition(
+      name: "add_note",
+      description: "Saves a note for the user.",
+      parametersSchema: {
+        "type": "object",
+        "properties": {
+          "text": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200,
+            "description": "The note",
+          },
+        },
+        "required": ["text"],
+        "additionalProperties": false,
+      },
+      requiresConfirmation: false,
+      execute: (args) => addNote(args["text"] as String),
+    ),
+    ToolDefinition(
+      name: "clear_notes",
+      description: "Deletes all of the user's notes.",
+      parametersSchema: {
+        "type": "object",
+        "properties": {},
+        "required": [],
+        "additionalProperties": false,
+      },
+      requiresConfirmation: true,
+      execute: (args) {
+        clearNotes();
+        return null;
+      },
+    ),
+  ];
+}

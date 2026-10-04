@@ -24,7 +24,12 @@ validation and the call into your function are generated for you.
 - **Validation that helps the model.** Wrong arguments never reach your
   code. Every problem is reported in one message written for the model,
   e.g. `passengers[0].age must be an integer, got string`, so it fixes the
-  call itself on the next turn.
+  call itself on the next turn. Add limits like `@Param('Age', min: 0)` or a
+  `pattern`, and the model sees them too.
+- **Tools that use your app.** Real tools need a database, an API client
+  or the signed-in user. Mark a class `@LlmToolset()` and its methods become
+  tools that use its fields: no globals, no command classes, no `switch` on
+  the tool name.
 - **Safe by default for risky actions.** Mark a tool
   `@LlmTool(requiresConfirmation: true)` and it only runs after the user says
   yes. Without a confirmation step, it never runs.
@@ -34,6 +39,9 @@ validation and the call into your function are generated for you.
 - **Provider rules handled.** Tool and parameter names follow the strictest
   provider's rules, so a tool that works with one model works with all of
   them.
+- **Prompt changes you can review.** Your doc comments and parameter names
+  are the prompt the model reads. One snapshot test turns every change to
+  them into a diff in your pull request.
 - **Tested against the real thing.** Each provider format is checked
   against that provider's official Dart SDK, and the Firebase adapter was
   tested live against Gemini.
@@ -345,7 +353,9 @@ the user's confirmation. If the user declines, the model is told that too.
 ## Compatibility
 
 Generated schemas use plain JSON Schema (`type`, `properties`, `required`,
-`enum`, `items`, nested objects, `description`, `additionalProperties`), and
+`enum`, `items`, nested objects, `description`, `additionalProperties`, and
+the [limits](#limits) `minimum`, `maximum`, `minLength`, `maxLength`,
+`pattern`, `minItems` and `maxItems`), and
 generated tool and parameter names follow the strictest provider rules. They
 work with:
 
@@ -409,8 +419,13 @@ returns a subclass of `Command`, `await allTools.first(args)` is a
 ### Tools as class methods
 
 Real tools often need something: a repository, an API client, the current
-user. Put them in a class marked `@LlmToolset()`, and its `@LlmTool` methods
-can use its fields:
+user. A top-level function can't receive them, so without toolsets you'd
+reach for globals, or have the tool return a "command" that your code then
+runs with a `switch` on the tool name.
+
+Instead, put the tools in a class marked `@LlmToolset()`. Its `@LlmTool`
+methods can use its fields, and you create it like any other class, e.g.
+with your dependency injection or in a test with fakes:
 
 ```dart
 @LlmToolset()
@@ -512,7 +527,9 @@ String bookFlight(List<Passenger> passengers, String from, String to) => '...';
 ### Limits
 
 `@Param` can limit what the LLM may send. The limits go into the schema, so
-the model sees them, and are checked before your function runs:
+the model sees them and usually gets it right the first time. And when it
+doesn't, the call is rejected before your function runs, so you don't have
+to check for a negative quantity, an empty name or a malformed id yourself:
 
 ```dart
 /// Plays a move in a game.
@@ -626,7 +643,7 @@ To test what a tool *does*, call it like a function:
 - Another package you import also has a `ToolDefinition` (for example
   `flutter_ai_core`). Import one of them with a prefix, e.g.
   `import 'package:llm_tool/llm_tool.dart' as ltc;` and
-  annotate with `@ltc.Tool()`. The generated code follows your prefix.
+  annotate with `@ltc.LlmTool()`. The generated code follows your prefix.
 
 **`The method 'toOpenAIJson' isn't defined for the type 'List'`** (or
 `invoke`, `toAnthropicJson`, ...)
@@ -671,6 +688,19 @@ To test what a tool *does*, call it like a function:
   value or a const list of those. Make the field nullable or required, or use
   a simpler default.
 
+**`"X.method" is a method, and @LlmTool methods need their class marked as a toolset`**
+- Add `@LlmToolset()` to the class. See
+  [Tools as class methods](#tools-as-class-methods).
+
+**`@LlmToolset class "X" has no @LlmTool methods`**
+- Mark at least one method with `@LlmTool()`, or remove `@LlmToolset()`.
+
+**`min and max only apply to numbers ...`** (or `minLength`, `pattern`,
+`minItems`)
+- Each limit fits certain types; see the table in [Limits](#limits). On a
+  list, `min`, `max`, `minLength`, `maxLength` and `pattern` apply to the
+  items, and `minItems` and `maxItems` to the list.
+
 **`Conflicting outputs were detected`**
 - Run `dart run build_runner build --delete-conflicting-outputs`.
 
@@ -679,10 +709,11 @@ All of them write into the same shared `.g.dart` part.
 
 ## Roadmap
 
-- An optional MCP package that registers `allTools` on an `McpServer` in one
-  line (today it's the short loop shown above).
-- `llm_tool_flutter`: an approval widget for
-  `requiresConfirmation` tools.
+- **1.0.0:** a stable API. The deprecated names (`@Tool`, `toOpenAiJson`,
+  `toOpenAiResponsesJson`) are removed; everything else stays as it is.
+
+Missing something? [Open an issue](https://github.com/amitgp853/llm_tool/issues)
+and tell me what you're building.
 
 ## Packages
 

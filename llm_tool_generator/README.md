@@ -6,8 +6,8 @@ turn any Dart function into an LLM tool with one annotation. No hand-written JSO
 For every `@LlmTool()` function it generates a `ToolDefinition` with the JSON
 Schema for the LLM, argument validation and type-safe dispatch.
 
-The full documentation, including supported types, validation and errors, and
-how to send tools to OpenAI, Anthropic or Gemini, is in the
+The full documentation, including supported types, limits, validation and
+errors, and how to send tools to OpenAI, Claude, Gemini or MCP, is in the
 [`llm_tool` README](https://pub.dev/packages/llm_tool).
 
 ## Quick start
@@ -72,11 +72,42 @@ final getWeatherTool = ToolDefinition(
 );
 
 /// Every tool in this file, e.g. to send to an LLM or look up by name.
-final List<ToolDefinition> allTools = [getWeatherTool];
+/// Typed by the tools' common return type, so calling one needs no cast.
+final allTools = [getWeatherTool];
 ```
 
 The list is named after the file: `tools.dart` gives `allTools`,
 `weather_tools.dart` gives `weatherTools`.
+
+For a class marked `@LlmToolset()`, its `@LlmTool` methods are generated
+into an extension, bound to the instance they're called on:
+
+```dart
+@LlmToolset()
+class WeatherTools {
+  WeatherTools(this._api);
+  final WeatherApi _api;
+
+  /// Gets the current weather for a city.
+  @LlmTool()
+  Future<String> getWeather(@Param('City name') String city) =>
+      _api.current(city);
+}
+
+// Generated:
+extension WeatherToolsLlmTools on WeatherTools {
+  List<ToolDefinition<String>> get llmTools => [
+    ToolDefinition(
+      name: "getWeather",
+      // ...
+      execute: (args) => getWeather(args["city"] as String),
+    ),
+  ];
+}
+
+// Use it:
+final tools = WeatherTools(api).llmTools;
+```
 
 ## Supported
 
@@ -92,15 +123,14 @@ The list is named after the file: `tools.dart` gives `allTools`,
 - Limits with `@Param('...', min: 0, max: 130)`, `minLength`, `maxLength`,
   `pattern`, `minItems` and `maxItems`. See
   [Limits](https://pub.dev/packages/llm_tool#limits).
-
 - Class parameters become nested object schemas, built through the class's
   unnamed constructor. freezed classes work too. See
   [Class parameters](https://pub.dev/packages/llm_tool#class-parameters).
 
 Anything else is a **build-time error** with a message explaining the fix:
 unsupported types, missing descriptions, tool names that LLM providers would
-reject, generic functions, and `@LlmTool` on methods of a class without
-`@LlmToolset()`.
+reject, generic functions, limits that don't fit the type, and `@LlmTool` on
+methods of a class without `@LlmToolset()`.
 
 ## Troubleshooting
 
@@ -111,7 +141,7 @@ skipped without a message.
 
 **`The name 'ToolDefinition' is defined in the libraries ...`**: another
 package (e.g. `flutter_ai_core`) also has a `ToolDefinition`. Import
-`llm_tool` with a prefix (`as ltc`) and use `@ltc.Tool()`; the
+`llm_tool` with a prefix (`as ltc`) and use `@ltc.LlmTool()`; the
 generated code follows your prefix.
 
 **`Conflicting outputs were detected`**: run

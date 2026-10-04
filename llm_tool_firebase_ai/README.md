@@ -69,6 +69,22 @@ For each tool call:
 `sendMessageWithTools` stops after 10 rounds of tool calls (`maxRounds`), so
 a confused model can't loop forever.
 
+Tools from an [`@LlmToolset`](https://pub.dev/packages/llm_tool#tools-as-class-methods)
+class work the same way. Combine lists as you like, and pass the same list
+to both calls:
+
+```dart
+final tools = [...allTools, ...CoachTools(engine, games).llmTools];
+final model = FirebaseAI.googleAI().generativeModel(
+  model: 'gemini-3.8-flash',
+  tools: [Tool.functionDeclarations(tools.toFunctionDeclarations())],
+);
+final reply = await model.startChat().sendMessageWithTools(
+  Content.text('How did my last game go?'),
+  tools,
+);
+```
+
 ## Tools that need confirmation
 
 Tools marked `@LlmTool(requiresConfirmation: true)` only run when your
