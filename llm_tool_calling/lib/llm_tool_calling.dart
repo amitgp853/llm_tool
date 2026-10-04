@@ -6,6 +6,7 @@
 library;
 
 export 'src/annotations.dart';
+export 'src/schema_utils.dart';
 export 'src/schema_validator.dart';
 export 'src/tool_argument_exception.dart';
 export 'src/tool_definition.dart';

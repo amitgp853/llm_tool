@@ -904,6 +904,39 @@ void two() {}
     });
   });
 
+  group('import prefixes', () {
+    const prefixedHeader =
+        "import 'package:llm_tool_calling/llm_tool_calling.dart' as ltc;\n\n"
+        "part 'tools.g.dart';\n\n";
+
+    test('llm_tool_calling imported with a prefix', () async {
+      final output = await _generate(
+        "/// Doc.\n@ltc.Tool()\nvoid f(@ltc.Param('City') String city) {}\n",
+        header: prefixedHeader,
+      );
+      expect(output, contains('final fTool = ltc.ToolDefinition('));
+      expect(output, contains('final List<ltc.ToolDefinition> allTools'));
+      expect(output, contains('"description": "City"'));
+    });
+
+    test('another ToolDefinition in scope (e.g. flutter_ai_core)', () async {
+      final output = await _generate(
+        // The other SDK's ToolDefinition is used by the app, unprefixed.
+        'const otherDefinition = ToolDefinition();\n\n'
+        '/// Doc.\n@ltc.Tool()\nvoid f() {}\n',
+        extraSources: {
+          'a|lib/other_sdk.dart':
+              'class ToolDefinition { const ToolDefinition(); }',
+        },
+        header:
+            "import 'package:llm_tool_calling/llm_tool_calling.dart' as ltc;\n"
+            "import 'other_sdk.dart';\n\n"
+            "part 'tools.g.dart';\n\n",
+      );
+      expect(output, contains('ltc.ToolDefinition('));
+    });
+  });
+
   group('return types', () {
     test('void function returns null', () async {
       final output = await _generate('''
@@ -1162,7 +1195,7 @@ void f() {}
       'get weather',
       'get.weather',
       '',
-      'a' * 65,
+      'a' * 64,
       '1_lookup',
       '-lookup',
     ]) {

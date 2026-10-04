@@ -1,3 +1,11 @@
+## Unreleased
+
+- The generated code uses your import prefix for `ToolDefinition`, so
+  `import 'package:llm_tool_calling/llm_tool_calling.dart' as ltc;` works,
+  and so does another package's `ToolDefinition` in the same file (e.g.
+  `flutter_ai_core`).
+- Tool names are limited to 63 characters, the firebase_ai limit.
+
 ## 0.3.0
 
 - Generates a list of all tools in each file, named after the file:

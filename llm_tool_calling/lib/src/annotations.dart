@@ -13,8 +13,8 @@ import 'tool_definition.dart';
 class Tool {
   /// The name sent to the LLM. Defaults to the function name.
   ///
-  /// Must be 1-64 letters, digits, `_` or `-`, which is what OpenAI,
-  /// Anthropic and Gemini accept.
+  /// Must start with a letter or `_`, then letters, digits, `_` or `-`, up
+  /// to 63 characters: the rules every supported provider and SDK accepts.
   final String? name;
 
   /// What the tool does, written for the LLM.

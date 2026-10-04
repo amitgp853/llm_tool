@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:llm_tool_calling/llm_tool_calling.dart';
 import 'package:test/test.dart';
 
@@ -316,6 +318,68 @@ void main() {
         'properties': {'city': 'string'},
       };
       expect(validateArguments(badSchema, {'city': 'Kanpur'}), isEmpty);
+    });
+  });
+
+  group('withoutAdditionalProperties', () {
+    test('removes it at every level and leaves the input unchanged', () {
+      final schema = <String, Object?>{
+        'type': 'object',
+        'properties': {
+          'passenger': {
+            'type': 'object',
+            'properties': {
+              'name': {'type': 'string'},
+            },
+            'additionalProperties': false,
+          },
+          'group': {
+            'type': 'array',
+            'items': {
+              'type': 'object',
+              'properties': <String, Object?>{},
+              'additionalProperties': false,
+            },
+          },
+        },
+        'required': ['passenger'],
+        'additionalProperties': false,
+      };
+      final copy = jsonEncode(schema);
+
+      expect(withoutAdditionalProperties(schema), {
+        'type': 'object',
+        'properties': {
+          'passenger': {
+            'type': 'object',
+            'properties': {
+              'name': {'type': 'string'},
+            },
+          },
+          'group': {
+            'type': 'array',
+            'items': {'type': 'object', 'properties': <String, Object?>{}},
+          },
+        },
+        'required': ['passenger'],
+      });
+      expect(jsonEncode(schema), copy, reason: 'input must not change');
+    });
+
+    test('a field named additionalProperties is kept', () {
+      final schema = <String, Object?>{
+        'type': 'object',
+        'properties': {
+          'additionalProperties': {'type': 'string'},
+        },
+        'additionalProperties': false,
+      };
+      expect(withoutAdditionalProperties(schema), {
+        'type': 'object',
+        'properties': {
+          'additionalProperties': {'type': 'string'},
+        },
+      });
     });
   });
 

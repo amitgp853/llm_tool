@@ -1,3 +1,10 @@
+## Unreleased
+
+- `withoutAdditionalProperties(schema)`: a copy of a schema for SDKs that
+  send it to Gemini's older `parameters` field, which rejects
+  `additionalProperties`.
+- Tool names are documented as up to 63 characters (the firebase_ai limit).
+
 ## 0.3.0
 
 - No code changes. Released together with `llm_tool_calling_generator`

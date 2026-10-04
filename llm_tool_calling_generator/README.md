@@ -101,8 +101,10 @@ reject, generic functions, and `@Tool` on methods.
 file with no other top-level annotation, a `@Tool` method is skipped without a
 message.
 
-**`The function 'ToolDefinition' isn't defined` in the `.g.dart` file**: import
-`package:llm_tool_calling/llm_tool_calling.dart` without a prefix.
+**`The name 'ToolDefinition' is defined in the libraries ...`**: another
+package (e.g. `flutter_ai_core`) also has a `ToolDefinition`. Import
+`llm_tool_calling` with a prefix (`as ltc`) and use `@ltc.Tool()`; the
+generated code follows your prefix.
 
 **`Conflicting outputs were detected`**: run
 `dart run build_runner build --delete-conflicting-outputs`.

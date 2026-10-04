@@ -35,7 +35,7 @@ class ToolGenerator extends GeneratorForAnnotation<Tool> {
 $tools
 
 /// Every tool in this file, e.g. to send to an LLM or look up by name.
-final List<ToolDefinition> $listName = [${names.join(', ')}];
+final List<${_toolDefinitionName(library.element)}> $listName = [${names.join(', ')}];
 ''';
   }
 
@@ -92,7 +92,7 @@ final List<ToolDefinition> $listName = [${names.join(', ')}];
       throw InvalidGenerationSource(
         'Tool name "$toolName" is invalid. To work with every LLM provider it '
         'must start with a letter or "_", then use only letters, digits, "_" '
-        'or "-", up to 64 characters. Use @Tool(name: ...) to set a valid '
+        'or "-", up to 63 characters. Use @Tool(name: ...) to set a valid '
         'one.',
         element: element,
       );
@@ -130,7 +130,7 @@ final List<ToolDefinition> $listName = [${names.join(', ')}];
         : '(args) => $call';
 
     return '''
-final ${functionName}Tool = ToolDefinition(
+final ${functionName}Tool = ${_toolDefinitionName(element.library)}(
   name: ${_literal(toolName)},
   description: ${_literal(description)},
   parametersSchema: ${_literal(schema)},
@@ -421,6 +421,27 @@ DartType? _listItemType(DartType type) =>
     ? type.typeArguments.single
     : null;
 
+/// How the generated code names llm_tool_calling's `ToolDefinition`:
+/// `ToolDefinition`, or `ltc.ToolDefinition` when the package is imported
+/// `as ltc` (e.g. to avoid a clash with another package's `ToolDefinition`).
+String _toolDefinitionName(LibraryElement library) {
+  for (final import in library.firstFragment.libraryImports) {
+    final element = import.importedLibrary?.exportNamespace.get2(
+      'ToolDefinition',
+    );
+    if (element != null &&
+        element.library?.uri.toString().startsWith(
+              'package:llm_tool_calling/',
+            ) ==
+            true) {
+      return _referenceTo(element, library);
+    }
+  }
+  // Not imported: the user's code doesn't compile anyway, and the analyzer
+  // points at the missing import.
+  return 'ToolDefinition';
+}
+
 /// How code in [library] (and so in its generated part) refers to [element]:
 /// `Unit`, or `u.Unit` when it is only imported with `as u`.
 String _referenceTo(Element element, LibraryElement library) {
@@ -468,9 +489,9 @@ String toolListName(String fileName) {
   return '${camelCase}Tools';
 }
 
-/// Accepted by OpenAI, Anthropic and Gemini (the strictest: it requires a
-/// letter or `_` first).
-final _validToolName = RegExp(r'^[a-zA-Z_][a-zA-Z0-9_-]{0,63}$');
+/// Accepted by OpenAI, Anthropic and Gemini. The strictest rules win: Gemini
+/// requires a letter or `_` first, and firebase_ai allows 63 characters.
+final _validToolName = RegExp(r'^[a-zA-Z_][a-zA-Z0-9_-]{0,62}$');
 
 /// Gemini only accepts letters, digits and `_` in parameter names.
 final _validParameterName = RegExp(r'^[a-zA-Z_][a-zA-Z0-9_]{0,63}$');

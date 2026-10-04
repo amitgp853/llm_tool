@@ -167,6 +167,10 @@ work with:
 | **Ollama** (local models) | `tools[].function.parameters` | Object | How well the model fills nested objects depends on the model. |
 | Other OpenAI-compatible APIs (DeepSeek, Groq, xAI…) | Same as OpenAI | Usually a JSON string | Same request shape as OpenAI. |
 
+Some SDKs still send schemas to Gemini in the older `parameters` field. If
+yours does, pass `withoutAdditionalProperties(tool.parametersSchema)`
+instead; unknown arguments are still rejected by `tool(args)`.
+
 Checked against each provider's official documentation in October 2026.
 To test it live with your own API keys, run
 [`provider_check.dart`](https://github.com/amitgp853/llm_tool_calling/blob/main/tool_calling_playground/bin/provider_check.dart):
@@ -178,7 +182,7 @@ have a key for, and checks that the model's arguments pass validation.
 | | |
 |---|---|
 | `@Tool()` | Marks a **top-level function** as a tool. |
-| `@Tool(name: 'get_weather')` | Name sent to the LLM. Defaults to the function name. Must be 1–64 letters, digits, `_` or `-`. |
+| `@Tool(name: 'get_weather')` | Name sent to the LLM. Defaults to the function name. Must start with a letter or `_`, then letters, digits, `_` or `-`, up to 63 characters. |
 | `@Tool(description: '...')` | Description sent to the LLM. Defaults to the function's doc comment (`///` or `/** */`). One of the two is required. |
 | `@Tool(requiresConfirmation: true)` | Sets `ToolDefinition.requiresConfirmation`, so your app can ask the user before running it (e.g. for deleting or paying). |
 | `@Param('...')` | Description of one parameter. Optional, but it helps the LLM a lot. |
@@ -309,9 +313,11 @@ Good to know:
   error, but in a file that has no other top-level annotation it is skipped
   without a message. Move the method out of the class.
 
-**`The function 'ToolDefinition' isn't defined` in the `.g.dart` file**
-- Import `package:llm_tool_calling/llm_tool_calling.dart` **without** a
-  prefix (no `as ...`). The generated code uses unprefixed names.
+**`The name 'ToolDefinition' is defined in the libraries ...`**
+- Another package you import also has a `ToolDefinition` (for example
+  `flutter_ai_core`). Import one of them with a prefix, e.g.
+  `import 'package:llm_tool_calling/llm_tool_calling.dart' as ltc;` and
+  annotate with `@ltc.Tool()`. The generated code follows your prefix.
 
 **`Could not resolve annotation for ...`**
 - The file uses `@Tool` without importing
@@ -324,7 +330,7 @@ Good to know:
 
 **`Tool name "..." is invalid`**
 - To work with every provider, a name must start with a letter or `_` and
-  use only letters, digits, `_` and `-`, up to 64 characters. Use
+  use only letters, digits, `_` and `-`, up to 63 characters. Use
   `@Tool(name: 'valid_name')`. This also applies to function names that
   contain `$`.
 
