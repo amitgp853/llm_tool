@@ -1,6 +1,5 @@
 import 'package:firebase_ai/firebase_ai.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:llm_tool_calling/llm_tool_calling.dart' hide Tool;
 import 'package:llm_tool_calling_firebase_ai/llm_tool_calling_firebase_ai.dart';
 
 /// The schema llm_tool_calling_generator writes for
@@ -229,6 +228,54 @@ void main() {
             .callable(_validArgs);
         expect(asked, isFalse);
       });
+    });
+  });
+
+  group('toolResponses', () {
+    test('uses the user role, which newer Gemini models accept', () {
+      final content = toolResponses([
+        const FunctionResponse('getWeather', {'result': 'Sunny'}, id: 'c1'),
+      ]);
+      expect(content.role, 'user');
+      expect(content.toJson(), {
+        'role': 'user',
+        'parts': [
+          {
+            'functionResponse': {
+              'name': 'getWeather',
+              'response': {'result': 'Sunny'},
+              'id': 'c1',
+            },
+          },
+        ],
+      });
+    });
+  });
+
+  group('duplicate tool names', () {
+    final tools = [_tool(name: 'getWeather'), _tool(name: 'getWeather')];
+    final error = throwsA(
+      isA<ArgumentError>().having(
+        (e) => e.message,
+        'message',
+        'Two tools are named "getWeather". Tool names must be unique; '
+            'rename one with @Tool(name: ...).',
+      ),
+    );
+
+    test('toFirebaseAiTool refuses them', () {
+      expect(tools.toFirebaseAiTool, error);
+    });
+
+    test('toFunctionDeclarations refuses them', () {
+      expect(tools.toFunctionDeclarations, error);
+    });
+
+    test('respondTo refuses them', () {
+      expect(
+        () => tools.respondTo(const FunctionCall('getWeather', _validArgs)),
+        error,
+      );
     });
   });
 

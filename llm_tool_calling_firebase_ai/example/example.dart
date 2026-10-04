@@ -6,8 +6,6 @@
 // runs without code generation.
 import 'package:firebase_ai/firebase_ai.dart';
 import 'package:firebase_core/firebase_core.dart';
-// firebase_ai has its own Tool class, so hide the @Tool annotation here.
-import 'package:llm_tool_calling/llm_tool_calling.dart' hide Tool;
 import 'package:llm_tool_calling_firebase_ai/llm_tool_calling_firebase_ai.dart';
 
 final allTools = [
@@ -48,30 +46,30 @@ Future<bool> askUser(ToolDefinition tool, Map<String, Object?> args) async =>
 Future<void> main() async {
   await Firebase.initializeApp(); // with your firebase_options.dart
 
-  // Automatic function calling: the chat runs the tools for you.
   final model = FirebaseAI.googleAI().generativeModel(
-    model: 'gemini-2.5-flash',
-    tools: [allTools.toFirebaseAiTool(confirm: askUser)],
-  );
-  final chat = model.startChat();
-  final response = await chat.sendMessage(
-    Content.text('What is the weather in Kanpur?'),
-  );
-  print(response.text);
-
-  // Manual function calling: you decide when to run each call.
-  final manualModel = FirebaseAI.googleAI().generativeModel(
-    model: 'gemini-2.5-flash',
+    model: 'gemini-3.8-flash',
     tools: [Tool.functionDeclarations(allTools.toFunctionDeclarations())],
   );
-  final manualChat = manualModel.startChat();
-  var reply = await manualChat.sendMessage(Content.text('Weather in Pune?'));
-  while (reply.functionCalls.isNotEmpty) {
-    final responses = [
-      for (final call in reply.functionCalls)
+  final chat = model.startChat();
+
+  // Runs every tool Gemini asks for, then returns Gemini's answer.
+  final reply = await chat.sendMessageWithTools(
+    Content.text('What is the weather in Kanpur?'),
+    allTools,
+    confirm: askUser,
+  );
+  print(reply.text);
+
+  // The same loop written by hand, e.g. to show progress between steps.
+  var manual = await chat.sendMessage(Content.text('And in Pune?'));
+  while (manual.functionCalls.isNotEmpty) {
+    final results = [
+      for (final call in manual.functionCalls)
         await allTools.respondTo(call, confirm: askUser),
     ];
-    reply = await manualChat.sendMessage(Content.functionResponses(responses));
+    // toolResponses, not Content.functionResponses: newer models reject
+    // firebase_ai's `function` role.
+    manual = await chat.sendMessage(toolResponses(results));
   }
-  print(reply.text);
+  print(manual.text);
 }

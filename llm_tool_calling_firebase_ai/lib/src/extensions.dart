@@ -51,32 +51,46 @@ extension ToolListFirebaseAi on Iterable<ToolDefinition> {
   /// A firebase_ai [Tool] whose functions run automatically in a
   /// `ChatSession`. See [ToolDefinitionFirebaseAi.toAutoFunctionDeclaration].
   ///
+  /// Note: firebase_ai 4.0.0 sends the results with the role `function`,
+  /// which newer Gemini models (e.g. gemini-3.8-flash) reject. It's fixed in
+  /// firebase_ai's source (flutterfire#18685) but not released yet; until
+  /// then, prefer [ChatSessionToolCalling.sendMessageWithTools].
+  ///
   /// ```dart
   /// final model = FirebaseAI.googleAI().generativeModel(
-  ///   model: 'gemini-2.5-flash',
+  ///   model: 'gemini-3.8-flash',
   ///   tools: [allTools.toFirebaseAiTool(confirm: askUser)],
   /// );
   /// ```
-  Tool toFirebaseAiTool({ToolConfirmation? confirm}) =>
-      Tool.functionDeclarations([
-        for (final tool in this)
-          tool.toAutoFunctionDeclaration(confirm: confirm),
-      ]);
+  ///
+  /// Throws an [ArgumentError] if two tools have the same name.
+  Tool toFirebaseAiTool({ToolConfirmation? confirm}) {
+    _checkUniqueNames();
+    return Tool.functionDeclarations([
+      for (final tool in this) tool.toAutoFunctionDeclaration(confirm: confirm),
+    ]);
+  }
 
   /// Declarations for manual function calling, e.g.
   /// `Tool.functionDeclarations(allTools.toFunctionDeclarations())`.
-  List<FunctionDeclaration> toFunctionDeclarations() => [
-    for (final tool in this) tool.toFunctionDeclaration(),
-  ];
+  ///
+  /// Throws an [ArgumentError] if two tools have the same name.
+  List<FunctionDeclaration> toFunctionDeclarations() {
+    _checkUniqueNames();
+    return [for (final tool in this) tool.toFunctionDeclaration()];
+  }
 
   /// Runs the tool the model asked for and returns the response to send back.
   ///
-  /// Never throws: unknown tools, invalid arguments, declined confirmations
-  /// and errors thrown by the tool become an `error` the model can read.
+  /// Problems with the call never throw: unknown tools, invalid arguments,
+  /// declined confirmations and errors thrown by the tool become an `error`
+  /// the model can read. Only a setup mistake throws: an [ArgumentError] if
+  /// two tools have the same name.
   Future<FunctionResponse> respondTo(
     FunctionCall call, {
     ToolConfirmation? confirm,
   }) async {
+    _checkUniqueNames();
     Map<String, Object?> response;
     final tool = where((tool) => tool.name == call.name).firstOrNull;
     if (tool == null) {
@@ -89,6 +103,20 @@ extension ToolListFirebaseAi on Iterable<ToolDefinition> {
       }
     }
     return FunctionResponse(call.name, response, id: call.id);
+  }
+
+  /// firebase_ai keeps tools in a map by name, so a duplicate would silently
+  /// replace another tool. Fail at setup instead.
+  void _checkUniqueNames() {
+    final seen = <String>{};
+    for (final tool in this) {
+      if (!seen.add(tool.name)) {
+        throw ArgumentError(
+          'Two tools are named "${tool.name}". Tool names must be unique; '
+          'rename one with @Tool(name: ...).',
+        );
+      }
+    }
   }
 }
 
@@ -134,3 +162,54 @@ Object? _jsonSafe(Object? value) => switch (value) {
   },
   _ => value.toString(),
 };
+
+/// Runs tools in a chat, so you don't write the tool-call loop yourself.
+///
+/// Create the model with `Tool.functionDeclarations(allTools.toFunctionDeclarations())`,
+/// then:
+///
+/// ```dart
+/// final reply = await chat.sendMessageWithTools(
+///   Content.text('Weather in Kanpur?'),
+///   allTools,
+///   confirm: askUser,
+/// );
+/// print(reply.text);
+/// ```
+extension ChatSessionToolCalling on ChatSession {
+  /// Sends [message], runs every tool Gemini asks for with
+  /// [ToolListFirebaseAi.respondTo], sends the results back, and repeats
+  /// until Gemini answers without calling a tool.
+  ///
+  /// Throws a [StateError] if Gemini is still calling tools after
+  /// [maxRounds] rounds.
+  Future<GenerateContentResponse> sendMessageWithTools(
+    Content message,
+    Iterable<ToolDefinition> tools, {
+    ToolConfirmation? confirm,
+    int maxRounds = 10,
+  }) async {
+    var response = await sendMessage(message);
+    for (var round = 1; response.functionCalls.isNotEmpty; round++) {
+      if (round > maxRounds) {
+        throw StateError(
+          'Gemini was still calling tools after $maxRounds rounds.',
+        );
+      }
+      final results = [
+        for (final call in response.functionCalls)
+          await tools.respondTo(call, confirm: confirm),
+      ];
+      response = await sendMessage(toolResponses(results));
+    }
+    return response;
+  }
+}
+
+/// Tool results to send back to Gemini: `chat.sendMessage(toolResponses(r))`.
+///
+/// Use this instead of firebase_ai's `Content.functionResponses`, which uses
+/// the role `function`: newer Gemini models reject it with "Role 'function'
+/// is not supported". This uses the role `user`, which Gemini accepts.
+Content toolResponses(Iterable<FunctionResponse> responses) =>
+    Content('user', responses.toList());

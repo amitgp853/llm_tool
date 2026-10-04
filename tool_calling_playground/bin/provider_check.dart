@@ -7,7 +7,7 @@
 //
 //   OPENAI_API_KEY     [OPENAI_MODEL]     default gpt-5-mini
 //   ANTHROPIC_API_KEY  [ANTHROPIC_MODEL]  default claude-opus-5-5
-//   GEMINI_API_KEY     [GEMINI_MODEL]     default gemini-2.5-flash
+//   GEMINI_API_KEY     [GEMINI_MODEL]     default gemini-3.8-flash
 //   MISTRAL_API_KEY    [MISTRAL_MODEL]    default mistral-small-latest
 //   DEEPSEEK_API_KEY   [DEEPSEEK_MODEL]   default deepseek-chat
 //   GROQ_API_KEY       GROQ_MODEL         (required, e.g. a Llama model id)
@@ -40,7 +40,7 @@ Future<void> main() async {
       _openAiCompatible('https://api.openai.com/v1', env['OPENAI_API_KEY']),
     ),
     ('Anthropic (Claude)', _model('ANTHROPIC', 'claude-opus-5-5'), _anthropic),
-    ('Google Gemini', _model('GEMINI', 'gemini-2.5-flash'), _gemini),
+    ('Google Gemini', _model('GEMINI', 'gemini-3.8-flash'), _gemini),
     (
       'Mistral',
       _model('MISTRAL', 'mistral-small-latest'),
