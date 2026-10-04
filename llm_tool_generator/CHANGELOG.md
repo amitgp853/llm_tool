@@ -1,3 +1,12 @@
+## 0.8.0
+
+- Generates toolsets: for each `@LlmToolset()` class, an extension with an
+  `llmTools` getter listing its `@LlmTool` methods (instance and static) as
+  tools bound to that instance, typed by their common return type.
+- `@LlmTool` on a method of a class without `@LlmToolset` is still a build
+  error, now suggesting `@LlmToolset`.
+- Requires `llm_tool` 0.8.0.
+
 ## 0.7.0
 
 - **Renamed from `llm_tool_calling_generator`** (now discontinued), to go

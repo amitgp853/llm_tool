@@ -1,6 +1,7 @@
 import 'tool_definition.dart';
 
-/// Marks a top-level function as a tool an LLM can call.
+/// Marks a top-level function, or a method of an [LlmToolset] class, as a
+/// tool an LLM can call.
 ///
 /// Run `dart run build_runner build` and the generator creates a
 /// `<functionName>Tool` [ToolDefinition] in the file's `.g.dart` part.
@@ -43,6 +44,34 @@ class LlmTool {
 /// clashes in files that import both.
 @Deprecated('Use @LlmTool() instead. Tool will be removed in 1.0.0.')
 typedef Tool = LlmTool;
+
+/// Marks a class whose `@LlmTool` methods are tools, e.g. tools that need
+/// a service, a repository or other state.
+///
+/// The generator adds an extension with an `llmTools` getter that returns
+/// the tools bound to one instance:
+///
+/// ```dart
+/// @LlmToolset()
+/// class WeatherTools {
+///   WeatherTools(this._api);
+///   final WeatherApi _api;
+///
+///   /// Gets the current weather for a city.
+///   @LlmTool()
+///   Future<String> getWeather(@Param('City name') String city) =>
+///       _api.current(city);
+/// }
+///
+/// final tools = WeatherTools(api).llmTools;
+/// ```
+///
+/// Static methods work too. `@LlmTool` methods in a class without
+/// `@LlmToolset` are a build error.
+class LlmToolset {
+  /// Marks a class as a toolset. See the class docs for an example.
+  const LlmToolset();
+}
 
 /// Describes one parameter of an [LlmTool] function to the LLM.
 ///

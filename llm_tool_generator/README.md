@@ -80,7 +80,9 @@ The list is named after the file: `tools.dart` gives `allTools`,
 
 ## Supported
 
-- Top-level functions: sync, async (`Future<T>`) and `void`.
+- Top-level functions, and instance or static methods of `@LlmToolset()`
+  classes (generated as an `llmTools` getter): sync, async (`Future<T>`) and
+  `void`.
 - `String`, `int`, `double`, `num`, `bool`, enum, class and `List`
   parameters (lists of any of these, including nested lists): positional or
   named, nullable or not, with or without defaults.
@@ -94,14 +96,15 @@ The list is named after the file: `tools.dart` gives `allTools`,
 
 Anything else is a **build-time error** with a message explaining the fix:
 unsupported types, missing descriptions, tool names that LLM providers would
-reject, generic functions, and `@LlmTool` on methods.
+reject, generic functions, and `@LlmTool` on methods of a class without
+`@LlmToolset()`.
 
 ## Troubleshooting
 
 **`Undefined name 'getWeatherTool'`**: add `part 'your_file.g.dart';` and run
-`dart run build_runner build`. `@LlmTool` only works on top-level functions; in a
-file with no other top-level annotation, a `@LlmTool` method is skipped without a
-message.
+`dart run build_runner build`. A `@LlmTool` method needs `@LlmToolset()` on its
+class; without it, in a file with no other top-level annotation, the method is
+skipped without a message.
 
 **`The name 'ToolDefinition' is defined in the libraries ...`**: another
 package (e.g. `flutter_ai_core`) also has a `ToolDefinition`. Import

@@ -947,6 +947,276 @@ Future<Stats> statsTyped() => statsTool({});
     });
   });
 
+  group('toolsets', () {
+    test('instance and static methods become an llmTools getter', () async {
+      final output = await _generate('''
+@LlmToolset()
+class Coach {
+  Coach(this.engine);
+  final String engine;
+
+  /// Analyzes a position.
+  @LlmTool(name: 'analyze_position')
+  Future<String> analyze(@Param('FEN') String fen) async => '\$engine: \$fen';
+
+  /// The engine version.
+  @LlmTool()
+  static String version() => '17';
+
+  /// Not a tool.
+  String helper() => '';
+}
+
+Future<String> firstResult(Coach coach) => coach.llmTools.first({'fen': ''});
+''');
+      expect(output, contains('extension CoachLlmTools on Coach {'));
+      expect(
+        output,
+        contains('List<ToolDefinition<String>> get llmTools => ['),
+      );
+      expect(
+        _withoutSpaces(output),
+        contains('execute:(args)=>analyze(args["fen"]asString)'),
+      );
+      expect(
+        _withoutSpaces(output),
+        contains('execute:(args)=>Coach.version()'),
+      );
+      expect(output, contains('name: "analyze_position"'));
+      expect(output, isNot(contains('helper')));
+      // Toolset methods aren't top-level tools.
+      expect(output, isNot(contains('allTools')));
+    });
+
+    test('the list is typed by the common return type (no casts)', () async {
+      await _generate('''
+sealed class Command {
+  const Command();
+}
+
+final class Analyze extends Command {
+  const Analyze();
+}
+
+final class Stats extends Command {
+  const Stats();
+}
+
+@LlmToolset()
+class Coach {
+  /// Analyze.
+  @LlmTool()
+  Analyze analyze() => const Analyze();
+
+  /// Stats.
+  @LlmTool()
+  Future<Stats> stats() async => const Stats();
+
+  /// Clear.
+  @LlmTool()
+  void clear() {}
+}
+
+List<ToolDefinition<Command?>> tools(Coach coach) => coach.llmTools;
+Future<Command?> firstCommand(Coach coach) => coach.llmTools.first({});
+''');
+    });
+
+    test('only void methods give ToolDefinition<Null>', () async {
+      final output = await _generate('''
+@LlmToolset()
+class Board {
+  /// Clears the board.
+  @LlmTool()
+  void clear() {}
+}
+''');
+      expect(output, contains('List<ToolDefinition<Null>> get llmTools'));
+      expect(
+        _withoutSpaces(output),
+        contains('execute:(args){clear();returnnull;}'),
+      );
+    });
+
+    test('works next to top-level tools, which stay in allTools', () async {
+      final output = await _generate('''
+/// Top level.
+@LlmTool()
+String top() => '';
+
+@LlmToolset()
+class Coach {
+  /// Method.
+  @LlmTool()
+  String method() => '';
+}
+
+List<ToolDefinition<String>> everything(Coach coach) =>
+    [...allTools, ...coach.llmTools];
+''');
+      expect(_withoutSpaces(output), contains('finalallTools=[topTool]'));
+      expect(output, contains('extension CoachLlmTools on Coach'));
+    });
+
+    test('several toolsets in one file', () async {
+      final output = await _generate('''
+@LlmToolset()
+class A {
+  /// A.
+  @LlmTool()
+  int a() => 1;
+}
+
+@LlmToolset()
+class B {
+  /// B.
+  @LlmTool()
+  bool b() => true;
+}
+''');
+      expect(output, contains('extension ALlmTools on A'));
+      expect(output, contains('extension BLlmTools on B'));
+    });
+
+    test('parameters work as for functions', () async {
+      final output = await _generate('''
+enum Side { white, black }
+
+/// A move.
+class Move {
+  Move({required this.from, required this.to});
+  final String from;
+  final String to;
+}
+
+@LlmToolset()
+class Coach {
+  /// Plays moves.
+  @LlmTool(requiresConfirmation: true)
+  String play(
+    @Param('The game', name: 'game_id') int gameId,
+    @Param('Moves') List<Move> moves, {
+    @Param('Side') Side side = Side.white,
+    String? note,
+  }) => '';
+}
+''');
+      expect(output, contains('requiresConfirmation: true'));
+      expect(output, contains('"game_id"'));
+      expect(output, contains('Side.values.byName'));
+      expect(_withoutSpaces(output), contains('??Side.white'));
+      expect(output, contains('"required": ["game_id", "moves"]'));
+    });
+
+    test('abstract and private classes', () async {
+      await _generate('''
+@LlmToolset()
+abstract class Api {
+  /// Fetches.
+  @LlmTool()
+  Future<String> fetch(String id);
+}
+
+@LlmToolset()
+class _Private {
+  /// Private.
+  @LlmTool()
+  int count() => 0;
+}
+
+Future<String> useApi(Api api) => api.llmTools.single({'id': '1'});
+Future<int> usePrivate() => _Private().llmTools.single({});
+''');
+    });
+
+    test('a method named args still calls the method', () async {
+      final output = await _generate('''
+@LlmToolset()
+class C {
+  /// Args.
+  @LlmTool()
+  int args(int x) => x;
+}
+''');
+      expect(output, contains('execute: (args) => this.args('));
+    });
+
+    test('with import prefixes', () async {
+      final output = await _generate(
+        '@ltc.LlmToolset()\n'
+        'class Coach {\n'
+        '  /// Move.\n'
+        '  @ltc.LlmTool()\n'
+        '  m.Move move() => m.Move();\n'
+        '}\n',
+        extraSources: {'a|lib/move.dart': 'class Move {}'},
+        header:
+            "import 'package:llm_tool/llm_tool.dart' as ltc;\n"
+            "import 'move.dart' as m;\n\n"
+            "part 'tools.g.dart';\n\n",
+      );
+      expect(output, contains('List<ltc.ToolDefinition<m.Move>> get llmTools'));
+    });
+
+    test('errors from the method point at the method', () async {
+      expect(
+        await _buildErrors('''
+@LlmToolset()
+class C {
+  @LlmTool()
+  void undocumented() {}
+}
+'''),
+        contains('Tool "undocumented" needs a description.'),
+      );
+      expect(
+        await _buildErrors('''
+@LlmToolset()
+class C {
+  /// Doc.
+  @LlmTool()
+  void generic<T>() {}
+}
+'''),
+        contains('@LlmTool functions can\'t be generic.'),
+      );
+    });
+
+    for (final (kind, source) in [
+      ('a mixin', 'mixin M {}'),
+      ('an enum', 'enum E { a }'),
+      ('a function', 'void f() {}'),
+    ]) {
+      test('@LlmToolset on $kind is an error', () async {
+        expect(
+          await _buildErrors('@LlmToolset()\n$source\n'),
+          contains('@LlmToolset can only be used on classes.'),
+        );
+      });
+    }
+
+    test('a generic toolset class is an error', () async {
+      expect(
+        await _buildErrors('''
+@LlmToolset()
+class C<T> {
+  /// Doc.
+  @LlmTool()
+  void m() {}
+}
+'''),
+        contains('@LlmToolset classes can\'t be generic.'),
+      );
+    });
+
+    test('a toolset without tools is an error', () async {
+      expect(
+        await _buildErrors('@LlmToolset()\nclass C {\n  void m() {}\n}\n'),
+        contains('@LlmToolset class "C" has no @LlmTool methods.'),
+      );
+    });
+  });
+
   group('import prefixes', () {
     const prefixedHeader =
         "import 'package:llm_tool/llm_tool.dart' as ltc;\n\n"
@@ -1213,7 +1483,10 @@ void f() {}
 @LlmTool()
 class NotAFunction {}
 '''),
-        contains('@LlmTool can only be used on top-level functions.'),
+        contains(
+          '@LlmTool can only be used on top-level functions and on methods of '
+          'an @LlmToolset class.',
+        ),
       );
     });
 
@@ -1224,31 +1497,41 @@ class NotAFunction {}
 @LlmTool()
 final notAFunction = 1;
 '''),
-        contains('@LlmTool can only be used on top-level functions.'),
+        contains(
+          '@LlmTool can only be used on top-level functions and on methods of '
+          'an @LlmToolset class.',
+        ),
       );
     });
 
     // source_gen skips files without any top-level annotation before our
     // generator runs, so these files also contain a top-level tool.
-    for (final (kind, container) in [
+    for (final (kind, container, fix) in [
       (
         'instance method',
         'class C {\n  /// Doc.\n  @LlmTool()\n  void m() {}\n}',
+        'Add @LlmToolset() to class "C"',
       ),
       (
         'static method',
         'class C {\n  /// Doc.\n  @LlmTool()\n  static void m() {}\n}',
+        'Add @LlmToolset() to class "C"',
       ),
-      ('mixin method', 'mixin C {\n  /// Doc.\n  @LlmTool()\n  void m() {}\n}'),
+      (
+        'mixin method',
+        'mixin C {\n  /// Doc.\n  @LlmTool()\n  void m() {}\n}',
+        'Move it to an @LlmToolset class',
+      ),
       (
         'extension method',
         'extension C on int {\n  /// Doc.\n  @LlmTool()\n  void m() {}\n}',
+        'Move it to an @LlmToolset class',
       ),
     ]) {
-      test('@Tool on a $kind is an error, not silently ignored', () async {
+      test('@Tool on a $kind without @LlmToolset is an error', () async {
         expect(
           await _buildErrors('/// Doc.\n@LlmTool()\nvoid f() {}\n\n$container'),
-          contains('"C.m" is a method.'),
+          allOf(contains('"C.m" is a method'), contains(fix)),
         );
       });
     }

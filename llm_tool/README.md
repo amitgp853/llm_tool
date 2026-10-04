@@ -372,7 +372,8 @@ have a key for, and checks that the model's arguments pass validation.
 
 | | |
 |---|---|
-| `@LlmTool()` | Marks a **top-level function** as a tool. |
+| `@LlmTool()` | Marks a **top-level function**, or a method of an `@LlmToolset` class, as a tool. |
+| `@LlmToolset()` | Marks a class whose `@LlmTool` methods are tools. See [Tools as class methods](#tools-as-class-methods). |
 | `@LlmTool(name: 'get_weather')` | Name sent to the LLM. Defaults to the function name. Must start with a letter or `_`, then letters, digits, `_` or `-`, up to 63 characters. |
 | `@LlmTool(description: '...')` | Description sent to the LLM. Defaults to the function's doc comment (`///` or `/** */`). One of the two is required. |
 | `@LlmTool(requiresConfirmation: true)` | Sets `ToolDefinition.requiresConfirmation`, so your app can ask the user before running it (e.g. for deleting or paying). |
@@ -403,6 +404,48 @@ Tools are typed by what your function returns: `getWeatherTool` is a
 list is typed by the tools' common return type, so if every tool in a file
 returns a subclass of `Command`, `await allTools.first(args)` is a
 `Command`, with no cast.
+
+### Tools as class methods
+
+Real tools often need something: a repository, an API client, the current
+user. Put them in a class marked `@LlmToolset()`, and its `@LlmTool` methods
+can use its fields:
+
+```dart
+@LlmToolset()
+class CoachTools {
+  CoachTools(this._engine, this._games);
+
+  final ChessEngine _engine;
+  final GameRepository _games;
+
+  /// Stockfish's evaluation and best line for a chess position.
+  @LlmTool(name: 'analyze_position')
+  Future<String> analyzePosition(@Param('The position in FEN') String fen) =>
+      _engine.analyze(fen);
+
+  /// The player's mistakes in one game.
+  @LlmTool(name: 'get_game_mistakes')
+  Future<String> gameMistakes(@Param('A game id', name: 'game_id') int id) =>
+      _games.mistakes(id);
+}
+```
+
+The generator adds an `llmTools` getter with the tools bound to that
+instance, typed like the list of all tools:
+
+```dart
+final tools = CoachTools(engine, games).llmTools;
+final result = await tools.invoke(call.name, call.arguments);
+
+// Together with top-level tools:
+final everything = [...allTools, ...tools];
+```
+
+Everything else works as for functions: parameter types, `@Param`, `name:`,
+`requiresConfirmation`, validation and typed results. Methods can be private,
+static methods work too, and the class can be abstract. Each `llmTools` call
+builds a new list, so keep the one you use.
 
 ## Supported types
 
@@ -512,9 +555,10 @@ Good to know:
 - Add `part 'your_file.g.dart';` to the file with your tools.
 - Run `dart run build_runner build`, or `dart run build_runner watch` to
   rebuild on every save.
-- `@LlmTool` only works on **top-level** functions. On a class method it is an
-  error, but in a file that has no other top-level annotation it is skipped
-  without a message. Move the method out of the class.
+- `@LlmTool` on a method needs `@LlmToolset()` on its class (see
+  [Tools as class methods](#tools-as-class-methods)). Without it the build
+  fails, or, in a file with no other top-level annotation, the method is
+  skipped without a message.
 
 **`The name 'ToolDefinition' is defined in the libraries ...`**
 - Another package you import also has a `ToolDefinition` (for example

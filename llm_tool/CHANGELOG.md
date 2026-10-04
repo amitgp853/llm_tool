@@ -1,3 +1,11 @@
+## 0.8.0
+
+- **Toolsets: tools as class methods.** Mark a class with `@LlmToolset()`
+  and its `@LlmTool` methods become tools that can use the instance's
+  fields, e.g. a repository or an API client. The generator adds an
+  `llmTools` getter: `CoachTools(engine, games).llmTools`. Static methods
+  work too.
+
 ## 0.7.0
 
 **Renamed from `llm_tool_calling`.** This package continues

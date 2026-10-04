@@ -13,33 +13,47 @@ final _paramChecker = TypeChecker.typeNamed(Param, inPackage: 'llm_tool');
 
 final _toolChecker = TypeChecker.typeNamed(LlmTool, inPackage: 'llm_tool');
 
+final _toolsetChecker = TypeChecker.typeNamed(
+  LlmToolset,
+  inPackage: 'llm_tool',
+);
+
 /// Also handles the deprecated `@Tool()`, which is the same class.
 class ToolGenerator extends GeneratorForAnnotation<LlmTool> {
   ToolGenerator() : super(inPackage: 'llm_tool');
 
-  /// Generates every tool, then a list of all tools in the file.
+  /// Generates every tool, a list of all tools in the file, then an
+  /// `llmTools` extension for each @LlmToolset class.
   @override
   Future<String> generate(LibraryReader library, BuildStep buildStep) async {
     _checkNoToolMethods(library.element);
-    final tools = await super.generate(library, buildStep);
-    if (tools.isEmpty) return tools;
+    final output = StringBuffer();
 
-    final names = [
-      for (final annotated in library.annotatedWith(typeChecker))
-        '${annotated.element.displayName}Tool',
-    ];
-    final listName = toolListName(buildStep.inputId.pathSegments.last);
-    return '''
+    final tools = await super.generate(library, buildStep);
+    if (tools.isNotEmpty) {
+      final names = [
+        for (final annotated in library.annotatedWith(typeChecker))
+          '${annotated.element.displayName}Tool',
+      ];
+      final listName = toolListName(buildStep.inputId.pathSegments.last);
+      output.write('''
 $tools
 
 /// Every tool in this file, e.g. to send to an LLM or look up by name.
 /// Typed by the tools' common return type, so calling one needs no cast.
 final $listName = [${names.join(', ')}];
-''';
+''');
+    }
+
+    for (final annotated in library.annotatedWith(_toolsetChecker)) {
+      output.write('\n${_toolset(annotated.element)}');
+    }
+    return output.toString();
   }
 
-  /// GeneratorForAnnotation only looks at top-level declarations, so @LlmTool on
-  /// a method would be silently ignored. Fail loudly instead.
+  /// GeneratorForAnnotation only looks at top-level declarations, so @LlmTool
+  /// on a method outside an @LlmToolset class would be silently ignored. Fail
+  /// loudly instead.
   void _checkNoToolMethods(LibraryElement lib) {
     final containers = <InstanceElement>[
       ...lib.classes,
@@ -49,12 +63,17 @@ final $listName = [${names.join(', ')}];
       ...lib.extensionTypes,
     ];
     for (final container in containers) {
+      if (container is ClassElement &&
+          _toolsetChecker.hasAnnotationOf(container)) {
+        continue;
+      }
       for (final method in container.methods) {
         if (_toolChecker.hasAnnotationOf(method)) {
           throw InvalidGenerationSource(
-            '@LlmTool can only be used on top-level functions, but '
-            '"${container.displayName}.${method.displayName}" is a method. '
-            'Move it to a top-level function.',
+            '"${container.displayName}.${method.displayName}" is a method, '
+            'and @LlmTool methods need their class marked as a toolset. '
+            '${container is ClassElement ? 'Add @LlmToolset() to class "${container.displayName}"' : 'Move it to an @LlmToolset class'}, '
+            'or make it a top-level function.',
             element: method,
           );
         }
@@ -68,13 +87,90 @@ final $listName = [${names.join(', ')}];
     ConstantReader annotation,
     BuildStep buildStep,
   ) {
-    // 1. @LlmTool only makes sense on top-level functions.
+    // @LlmTool only makes sense on top-level functions and toolset methods.
     if (element is! TopLevelFunctionElement) {
       throw InvalidGenerationSource(
-        '@LlmTool can only be used on top-level functions.',
+        '@LlmTool can only be used on top-level functions and on methods of '
+        'an @LlmToolset class.',
         element: element,
       );
     }
+    final definition = _toolDefinition(
+      element,
+      annotation,
+      call: element.displayName,
+    );
+    return 'final ${element.displayName}Tool = $definition;\n';
+  }
+
+  /// The `llmTools` extension for an @LlmToolset class.
+  String _toolset(Element element) {
+    if (element is! ClassElement) {
+      throw InvalidGenerationSource(
+        '@LlmToolset can only be used on classes.',
+        element: element,
+      );
+    }
+    if (element.typeParameters.isNotEmpty) {
+      throw InvalidGenerationSource(
+        '@LlmToolset classes can\'t be generic. Remove the type parameters '
+        'from "${element.displayName}".',
+        element: element,
+      );
+    }
+    final className = element.displayName;
+    final library = element.library;
+    final definitions = <String>[];
+    final resultTypes = <DartType>[];
+    for (final method in element.methods) {
+      final annotation = _toolChecker.firstAnnotationOf(method);
+      if (annotation == null) continue;
+      definitions.add(
+        _toolDefinition(
+          method,
+          ConstantReader(annotation),
+          // Inside the extension, `this` is the instance. Only the closure's
+          // `args` parameter can hide a method of the same name.
+          call: method.isStatic
+              ? '$className.${method.displayName}'
+              : method.displayName == 'args'
+              ? 'this.args'
+              : method.displayName,
+        ),
+      );
+      resultTypes.add(_resultType(method.returnType, library));
+    }
+    if (definitions.isEmpty) {
+      throw InvalidGenerationSource(
+        '@LlmToolset class "$className" has no @LlmTool methods. Mark at '
+        'least one method with @LlmTool().',
+        element: element,
+      );
+    }
+
+    // A getter's return type isn't inferred, so write the type a list
+    // literal would infer: the tools' common return type.
+    final common = resultTypes.reduce(library.typeSystem.leastUpperBound);
+    final listType =
+        'List<${_toolDefinitionName(library)}<${_typeCode(common, library)}>>';
+    return '''
+/// The @LlmTool methods of [$className] as tools.
+extension ${className}LlmTools on $className {
+  /// Every tool of this [$className], bound to this instance, e.g. to send
+  /// to an LLM or look up by name.
+  $listType get llmTools => [${definitions.map((d) => '\n    $d,').join()}
+  ];
+}
+''';
+  }
+
+  /// A `ToolDefinition(...)` expression for a tool function or method,
+  /// whose code calls it as [call].
+  String _toolDefinition(
+    ExecutableElement element,
+    ConstantReader annotation, {
+    required String call,
+  }) {
     if (element.typeParameters.isNotEmpty) {
       throw InvalidGenerationSource(
         '@LlmTool functions can\'t be generic. Remove the type parameters from '
@@ -83,7 +179,7 @@ final $listName = [${names.join(', ')}];
       );
     }
 
-    // 2. Read the tool's name, description and settings.
+    // 1. Read the tool's name, description and settings.
     final functionName = element.displayName;
     final toolName = annotation.peek('name')?.stringValue ?? functionName;
     // OpenAI, Anthropic and Gemini all reject names outside this pattern.
@@ -110,12 +206,12 @@ final $listName = [${names.join(', ')}];
         .read('requiresConfirmation')
         .boolValue;
 
-    // 3. Build the schema and the call arguments from the parameters.
+    // 2. Build the schema and the call arguments from the parameters.
     final params = _TypeMapper(
       element.library,
     ).parameters(element.formalParameters, map: 'args', path: '');
 
-    // 4. Write the generated code.
+    // 3. Write the generated code.
     final schema = {
       'type': 'object',
       'properties': params.properties,
@@ -123,21 +219,49 @@ final $listName = [${names.join(', ')}];
       // Tells the LLM what call() enforces: no extra arguments.
       'additionalProperties': false,
     };
-    final call = '$functionName(${params.arguments})';
+    final callCode = '$call(${params.arguments})';
     final execute = element.returnType is VoidType
-        ? '(args) { $call; return null; }'
-        : '(args) => $call';
+        ? '(args) { $callCode; return null; }'
+        : '(args) => $callCode';
 
     return '''
-final ${functionName}Tool = ${_toolDefinitionName(element.library)}(
+${_toolDefinitionName(element.library)}(
   name: ${_literal(toolName)},
   description: ${_literal(description)},
   parametersSchema: ${_literal(schema)},
   requiresConfirmation: $requiresConfirmation,
   execute: $execute,
-);
-''';
+)''';
   }
+}
+
+/// The `T` of the `ToolDefinition<T>` for a function returning [type]:
+/// `Future<T>` and `FutureOr<T>` give `T`, `void` gives `Null`.
+DartType _resultType(DartType type, LibraryElement library) {
+  if (type is VoidType) return library.typeProvider.nullType;
+  if (type is InterfaceType &&
+      (type.isDartAsyncFuture || type.isDartAsyncFutureOr)) {
+    return type.typeArguments.single;
+  }
+  return type;
+}
+
+/// Dart code for [type] that works inside [library], respecting import
+/// prefixes. Types it can't write safely become `Object?`.
+String _typeCode(DartType type, LibraryElement library) {
+  if (type is VoidType) return 'void';
+  if (type is DynamicType) return 'dynamic';
+  if (type is InterfaceType) {
+    if (type.isDartCoreNull) return 'Null';
+    final args = type.typeArguments.isEmpty
+        ? ''
+        : '<${type.typeArguments.map((t) => _typeCode(t, library)).join(', ')}>';
+    final question = type.nullabilitySuffix == NullabilitySuffix.question
+        ? '?'
+        : '';
+    return '${_referenceTo(type.element, library)}$args$question';
+  }
+  return 'Object?';
 }
 
 /// The schema properties, required names and call arguments for a list of
