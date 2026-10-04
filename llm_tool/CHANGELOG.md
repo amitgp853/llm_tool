@@ -1,3 +1,29 @@
+## 0.7.0
+
+**Renamed from `llm_tool_calling`.** This package continues
+`llm_tool_calling` (now discontinued) under a shorter name that matches the
+`@LlmTool` annotation. The generator is now `llm_tool_generator` and the
+Firebase adapter `llm_tool_firebase_ai`. To switch, update `pubspec.yaml`
+and replace `package:llm_tool_calling/llm_tool_calling.dart` with
+`package:llm_tool/llm_tool.dart`. If your `build.yaml` configures the
+builder, it's now `llm_tool_generator:llm_tool`.
+
+Preparing the 1.0 API. Nothing else breaks: old names still work and are
+marked deprecated until 1.0.0.
+
+- `@LlmTool()` replaces `@Tool()`. Almost every AI SDK (firebase_ai,
+  openai_dart, anthropic_sdk_dart, mcp_dart) has its own `Tool` class, which
+  clashed in files that import both. `@Tool()` is a deprecated alias.
+- `toOpenAIJson()` and `toOpenAIResponsesJson()` replace `toOpenAiJson()`
+  and `toOpenAiResponsesJson()` (Dart style for two-letter acronyms, like
+  `OpenAIClient`). The old names are deprecated aliases.
+- `ToolDefinition<T>` is typed by the tool's return type: `call` returns
+  `Future<T>`, so results need no cast. Hand-written tools get `T` inferred.
+
+To upgrade from `llm_tool_calling`: switch the package names (above), then
+replace `@Tool(` with `@LlmTool(` and `toOpenAi` with `toOpenAI`; your IDE
+shows each remaining place as a deprecation hint.
+
 ## 0.6.2
 
 - README: every "Use with your SDK" example now imports

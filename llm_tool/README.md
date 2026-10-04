@@ -1,18 +1,18 @@
-# llm_tool_calling
+# llm_tool
 
 **Turn any Dart function into an LLM tool with one annotation. Works with
 OpenAI, Claude, Gemini and MCP. No hand-written JSON schemas.**
 
 ```dart
 /// Gets the current weather for a city.
-@Tool()
+@LlmTool()
 String getWeather(@Param('City name, e.g. Kanpur') String city) => '...';
 ```
 
 Run `build_runner`, and the model can call it: the JSON schema, argument
 validation and the call into your function are generated for you.
 
-## Why llm_tool_calling?
+## Why llm_tool?
 
 - **No hand-written JSON schemas.** Your Dart function is the single source
   of truth. Rename a parameter or add one, and the schema follows on the
@@ -26,7 +26,7 @@ validation and the call into your function are generated for you.
   e.g. `passengers[0].age must be an integer, got string`, so it fixes the
   call itself on the next turn.
 - **Safe by default for risky actions.** Mark a tool
-  `@Tool(requiresConfirmation: true)` and it only runs after the user says
+  `@LlmTool(requiresConfirmation: true)` and it only runs after the user says
   yes. Without a confirmation step, it never runs.
 - **Real Dart types.** Enums, lists, nested classes (freezed too), nullable
   parameters and defaults. JSON quirks are handled for you: `5.0` becomes
@@ -41,11 +41,11 @@ validation and the call into your function are generated for you.
 ## How it works
 
 ```
- your @Tool() function
+ your @LlmTool() function
           │  dart run build_runner build
           ▼
  getWeatherTool (+ allTools: every tool in the file)
-          │  allTools.toOpenAiJson() / toAnthropicJson() / toGeminiJson() / toMcpJson()
+          │  allTools.toOpenAIJson() / toAnthropicJson() / toGeminiJson() / toMcpJson()
           ▼
  the model ── calls a tool ──► allTools.invoke(name, arguments)
                                   validate → confirm (if needed) → run your function
@@ -57,7 +57,7 @@ validation and the call into your function are generated for you.
 **1. Install**
 
 ```sh
-dart pub add llm_tool_calling dev:llm_tool_calling_generator dev:build_runner
+dart pub add llm_tool dev:llm_tool_generator dev:build_runner
 ```
 
 (In a Flutter app, use `flutter pub add` with the same arguments.)
@@ -65,12 +65,12 @@ dart pub add llm_tool_calling dev:llm_tool_calling_generator dev:build_runner
 **2. Write a tool** in, for example, `lib/tools.dart`:
 
 ```dart
-import 'package:llm_tool_calling/llm_tool_calling.dart';
+import 'package:llm_tool/llm_tool.dart';
 
 part 'tools.g.dart';
 
 /// Gets the current weather for a city.
-@Tool()
+@LlmTool()
 String getWeather(
   @Param('City name, e.g. Kanpur') String city, {
   @Param('Use Celsius instead of Fahrenheit') bool celsius = true,
@@ -89,11 +89,11 @@ list of every tool in the file.
 **4. Use it** with your SDK (see [Use with your SDK](#use-with-your-sdk)):
 
 ```dart
-import 'package:llm_tool_calling/llm_tool_calling.dart';
+import 'package:llm_tool/llm_tool.dart';
 
 import 'tools.dart';
 
-final tools = allTools.toOpenAiJson(); // or toAnthropicJson(), toGeminiJson()...
+final tools = allTools.toOpenAIJson(); // or toAnthropicJson(), toGeminiJson()...
 
 // When the model calls a tool:
 final result = await allTools.invoke('getWeather', {'city': 'Kanpur'});
@@ -134,7 +134,7 @@ final getWeatherTool = ToolDefinition(
 
 ```dart
 /// Gets the current weather for a city.
-@Tool()
+@LlmTool()
 String getWeather(
   @Param('City name, e.g. Kanpur') String city, {
   @Param('Use Celsius instead of Fahrenheit') bool celsius = true,
@@ -150,8 +150,8 @@ Everything is built into this package; you don't add anything per SDK.
 
 | Method | For |
 |---|---|
-| `allTools.toOpenAiJson()` | OpenAI Chat Completions, and compatible APIs (Mistral, Groq, DeepSeek, Ollama...) |
-| `allTools.toOpenAiResponsesJson()` | OpenAI Responses API |
+| `allTools.toOpenAIJson()` | OpenAI Chat Completions, and compatible APIs (Mistral, Groq, DeepSeek, Ollama...) |
+| `allTools.toOpenAIResponsesJson()` | OpenAI Responses API |
 | `allTools.toAnthropicJson()` | Anthropic (Claude) |
 | `allTools.toGeminiJson()` | Gemini (as `parametersJsonSchema`) |
 | `allTools.toMcpJson()` | Model Context Protocol servers |
@@ -164,13 +164,14 @@ them), and returns a `ToolResult`. Send `result.toText()` back to the model
 tools and exceptions from your function all become an error the model can
 read and fix.
 
-> **Import `llm_tool_calling` in every file that uses these methods.** They
+> **Import `llm_tool` in every file that uses these methods.** They
 > are extension methods, which Dart only finds where the package is
 > imported; importing your `tools.dart` isn't enough.
 >
 > **Import SDKs with a prefix** (`as openai`, `as anthropic`, `as mcp`):
-> most AI SDKs also have classes called `Tool`, and Anthropic's has a
-> `ToolDefinition`, just like this package.
+> most AI SDKs have a class called `Tool`, which clashes with this
+> package's deprecated `@Tool` alias until 1.0.0, and Anthropic's SDK has
+> a `ToolDefinition` too.
 
 ### OpenAI
 
@@ -179,13 +180,13 @@ ask a question, run every tool the model calls, return its answer.
 
 ```dart
 import 'package:openai_dart/openai_dart.dart' as openai;
-import 'package:llm_tool_calling/llm_tool_calling.dart';
+import 'package:llm_tool/llm_tool.dart';
 
-import 'tools.dart'; // your @Tool functions and the generated allTools
+import 'tools.dart'; // your @LlmTool functions and the generated allTools
 
 Future<String?> askOpenAi(String question) async {
   final client = openai.OpenAIClient.fromEnvironment(); // OPENAI_API_KEY
-  final tools = allTools.toOpenAiJson().map(openai.Tool.fromJson).toList();
+  final tools = allTools.toOpenAIJson().map(openai.Tool.fromJson).toList();
   final messages = <openai.ChatMessage>[openai.ChatMessage.user(question)];
   try {
     while (true) {
@@ -217,7 +218,7 @@ Future<String?> askOpenAi(String question) async {
 }
 ```
 
-Using the Responses API? Use `toOpenAiResponsesJson()` instead.
+Using the Responses API? Use `toOpenAIResponsesJson()` instead.
 
 ### Claude
 
@@ -225,9 +226,9 @@ With [`anthropic_sdk_dart`](https://pub.dev/packages/anthropic_sdk_dart):
 
 ```dart
 import 'package:anthropic_sdk_dart/anthropic_sdk_dart.dart' as anthropic;
-import 'package:llm_tool_calling/llm_tool_calling.dart';
+import 'package:llm_tool/llm_tool.dart';
 
-import 'tools.dart'; // your @Tool functions and the generated allTools
+import 'tools.dart'; // your @LlmTool functions and the generated allTools
 
 Future<String> askClaude(String question) async {
   final client = anthropic.AnthropicClient.fromEnvironment(); // ANTHROPIC_API_KEY
@@ -273,7 +274,7 @@ Future<String> askClaude(String question) async {
 ### Gemini
 
 - **In a Flutter app with Firebase:** use the
-  [`llm_tool_calling_firebase_ai`](https://pub.dev/packages/llm_tool_calling_firebase_ai)
+  [`llm_tool_firebase_ai`](https://pub.dev/packages/llm_tool_firebase_ai)
   adapter. One call runs the whole loop:
   `chat.sendMessageWithTools(Content.text(question), allTools)`. (firebase_ai
   needs typed schema objects rather than JSON, which is why this one part is
@@ -290,9 +291,9 @@ Claude Desktop, Cursor and other MCP clients.
 
 ```dart
 import 'package:mcp_dart/mcp_dart.dart' as mcp;
-import 'package:llm_tool_calling/llm_tool_calling.dart';
+import 'package:llm_tool/llm_tool.dart';
 
-import 'tools.dart'; // your @Tool functions and the generated allTools
+import 'tools.dart'; // your @LlmTool functions and the generated allTools
 
 Future<void> main() async {
   final server = mcp.McpServer(
@@ -327,7 +328,7 @@ integration there is.
 ### Tools that need confirmation
 
 Pass `confirm` to `invoke` to ask the user before running a tool marked
-`@Tool(requiresConfirmation: true)`. It's called after validation, so users
+`@LlmTool(requiresConfirmation: true)`. It's called after validation, so users
 are never asked about a call that would fail:
 
 ```dart
@@ -350,12 +351,12 @@ work with:
 
 | Provider | Use | Arguments arrive as | Notes |
 |---|---|---|---|
-| **OpenAI** (Chat Completions, Responses) | `toOpenAiJson()` / `toOpenAiResponsesJson()` | JSON **string** (`invoke` accepts it as is) | Works as-is. Strict mode (`strict: true`) also needs every field in `required`, so it only fits tools without optional parameters. |
+| **OpenAI** (Chat Completions, Responses) | `toOpenAIJson()` / `toOpenAIResponsesJson()` | JSON **string** (`invoke` accepts it as is) | Works as-is. Strict mode (`strict: true`) also needs every field in `required`, so it only fits tools without optional parameters. |
 | **Anthropic Claude** | `toAnthropicJson()` | Object (`input`) | Current models don't allow forced `tool_choice`; use `auto` and name the tool in your prompt. |
 | **Google Gemini** 2.5+ | `toGeminiJson()` (`parametersJsonSchema`) | Object (`args`) | Use `parametersJsonSchema`, **not** `parameters`: the older field rejects `additionalProperties`. Works with `firebase_ai` via the same field. |
-| **Mistral** | `toOpenAiJson()` | JSON string | Same shape as OpenAI. |
-| **Ollama** (local models) | `toOpenAiJson()` | Object | How well the model fills nested objects depends on the model. |
-| Other OpenAI-compatible APIs (DeepSeek, Groq, xAI…) | `toOpenAiJson()` | Usually a JSON string | Same request shape as OpenAI. |
+| **Mistral** | `toOpenAIJson()` | JSON string | Same shape as OpenAI. |
+| **Ollama** (local models) | `toOpenAIJson()` | Object | How well the model fills nested objects depends on the model. |
+| Other OpenAI-compatible APIs (DeepSeek, Groq, xAI…) | `toOpenAIJson()` | Usually a JSON string | Same request shape as OpenAI. |
 
 Some SDKs still send schemas to Gemini in the older `parameters` field. If
 yours does, pass `withoutAdditionalProperties(tool.parametersSchema)`
@@ -363,7 +364,7 @@ instead; unknown arguments are still rejected by `tool(args)`.
 
 Checked against each provider's official documentation in October 2026.
 To test it live with your own API keys, run
-[`provider_check.dart`](https://github.com/amitgp853/llm_tool_calling/blob/main/tool_calling_playground/bin/provider_check.dart):
+[`provider_check.dart`](https://github.com/amitgp853/llm_tool/blob/main/tool_calling_playground/bin/provider_check.dart):
 it sends a tool with nested objects, lists and enums to every provider you
 have a key for, and checks that the model's arguments pass validation.
 
@@ -371,10 +372,10 @@ have a key for, and checks that the model's arguments pass validation.
 
 | | |
 |---|---|
-| `@Tool()` | Marks a **top-level function** as a tool. |
-| `@Tool(name: 'get_weather')` | Name sent to the LLM. Defaults to the function name. Must start with a letter or `_`, then letters, digits, `_` or `-`, up to 63 characters. |
-| `@Tool(description: '...')` | Description sent to the LLM. Defaults to the function's doc comment (`///` or `/** */`). One of the two is required. |
-| `@Tool(requiresConfirmation: true)` | Sets `ToolDefinition.requiresConfirmation`, so your app can ask the user before running it (e.g. for deleting or paying). |
+| `@LlmTool()` | Marks a **top-level function** as a tool. |
+| `@LlmTool(name: 'get_weather')` | Name sent to the LLM. Defaults to the function name. Must start with a letter or `_`, then letters, digits, `_` or `-`, up to 63 characters. |
+| `@LlmTool(description: '...')` | Description sent to the LLM. Defaults to the function's doc comment (`///` or `/** */`). One of the two is required. |
+| `@LlmTool(requiresConfirmation: true)` | Sets `ToolDefinition.requiresConfirmation`, so your app can ask the user before running it (e.g. for deleting or paying). |
 | `@Param('...')` | Description of one parameter. Optional, but it helps the LLM a lot. |
 | `@Param('...', name: 'game_id')` | The name the LLM sees and sends, e.g. snake case, while your Dart parameter stays `gameId`. Works on class fields too. |
 
@@ -396,6 +397,12 @@ after the file so that several tool files never clash:
 // Send every tool to the LLM, from one file or several:
 final tools = [...weatherTools, ...flightBookingTools];
 ```
+
+Tools are typed by what your function returns: `getWeatherTool` is a
+`ToolDefinition<String>`, so `await getWeatherTool(args)` is a `String`. The
+list is typed by the tools' common return type, so if every tool in a file
+returns a subclass of `Command`, `await allTools.first(args)` is a
+`Command`, with no cast.
 
 ## Supported types
 
@@ -443,7 +450,7 @@ class Passenger {
 }
 
 /// Books a flight.
-@Tool(requiresConfirmation: true)
+@LlmTool(requiresConfirmation: true)
 String bookFlight(List<Passenger> passengers, String from, String to) => '...';
 ```
 
@@ -505,35 +512,35 @@ Good to know:
 - Add `part 'your_file.g.dart';` to the file with your tools.
 - Run `dart run build_runner build`, or `dart run build_runner watch` to
   rebuild on every save.
-- `@Tool` only works on **top-level** functions. On a class method it is an
+- `@LlmTool` only works on **top-level** functions. On a class method it is an
   error, but in a file that has no other top-level annotation it is skipped
   without a message. Move the method out of the class.
 
 **`The name 'ToolDefinition' is defined in the libraries ...`**
 - Another package you import also has a `ToolDefinition` (for example
   `flutter_ai_core`). Import one of them with a prefix, e.g.
-  `import 'package:llm_tool_calling/llm_tool_calling.dart' as ltc;` and
+  `import 'package:llm_tool/llm_tool.dart' as ltc;` and
   annotate with `@ltc.Tool()`. The generated code follows your prefix.
 
-**`The method 'toOpenAiJson' isn't defined for the type 'List'`** (or
+**`The method 'toOpenAIJson' isn't defined for the type 'List'`** (or
 `invoke`, `toAnthropicJson`, ...)
-- Add `import 'package:llm_tool_calling/llm_tool_calling.dart';` to that
+- Add `import 'package:llm_tool/llm_tool.dart';` to that
   file. These are extension methods, and importing only your `tools.dart`
   doesn't bring them into scope.
 
 **`Could not resolve annotation for ...`**
-- The file uses `@Tool` without importing
-  `package:llm_tool_calling/llm_tool_calling.dart`.
+- The file uses `@LlmTool` without importing
+  `package:llm_tool/llm_tool.dart`.
 
 **`Tool "x" needs a description`**
 - Add a `///` doc comment above the function, or use
-  `@Tool(description: '...')`. The LLM relies on it to decide when to call
+  `@LlmTool(description: '...')`. The LLM relies on it to decide when to call
   your tool.
 
 **`Tool name "..." is invalid`**
 - To work with every provider, a name must start with a letter or `_` and
   use only letters, digits, `_` and `-`, up to 63 characters. Use
-  `@Tool(name: 'valid_name')`. This also applies to function names that
+  `@LlmTool(name: 'valid_name')`. This also applies to function names that
   contain `$`.
 
 **`Parameter "..." has a name some LLM providers reject`**
@@ -568,21 +575,21 @@ All of them write into the same shared `.g.dart` part.
 
 - An optional MCP package that registers `allTools` on an `McpServer` in one
   line (today it's the short loop shown above).
-- `llm_tool_calling_flutter`: an approval widget for
+- `llm_tool_flutter`: an approval widget for
   `requiresConfirmation` tools.
 
 ## Packages
 
 | Package | Purpose | Add as |
 |---|---|---|
-| [`llm_tool_calling`](https://pub.dev/packages/llm_tool_calling) | Annotations, `ToolDefinition`, validation | dependency |
-| [`llm_tool_calling_generator`](https://pub.dev/packages/llm_tool_calling_generator) | The `build_runner` code generator | dev dependency |
-| [`llm_tool_calling_firebase_ai`](https://pub.dev/packages/llm_tool_calling_firebase_ai) | Adapter for Firebase AI Logic (`firebase_ai`) | dependency |
+| [`llm_tool`](https://pub.dev/packages/llm_tool) | Annotations, `ToolDefinition`, validation | dependency |
+| [`llm_tool_generator`](https://pub.dev/packages/llm_tool_generator) | The `build_runner` code generator | dev dependency |
+| [`llm_tool_firebase_ai`](https://pub.dev/packages/llm_tool_firebase_ai) | Adapter for Firebase AI Logic (`firebase_ai`) | dependency |
 
 ## Author
 
 Built and maintained by [Amit Gupta](https://github.com/amitgp853).
 Bug reports, ideas and pull requests are welcome on
-[GitHub](https://github.com/amitgp853/llm_tool_calling/issues).
+[GitHub](https://github.com/amitgp853/llm_tool/issues).
 If this package saves you time, a like on pub.dev or a star on GitHub helps
 others find it.

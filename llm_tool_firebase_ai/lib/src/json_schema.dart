@@ -1,11 +1,11 @@
 import 'package:firebase_ai/firebase_ai.dart';
 // firebase_ai has its own Tool class; ours is the annotation, not needed here.
-import 'package:llm_tool_calling/llm_tool_calling.dart' hide Tool;
+import 'package:llm_tool/llm_tool.dart' hide Tool;
 
 /// Converts a JSON Schema map, as in [ToolDefinition.parametersSchema], to
 /// firebase_ai's [JSONSchema].
 ///
-/// Supports what llm_tool_calling generates: the types string, integer,
+/// Supports what llm_tool generates: the types string, integer,
 /// number, boolean, array and object, with `description`, `enum` (strings),
 /// `items`, `properties` and `required`. `additionalProperties` is dropped
 /// because firebase_ai can't express it; [ToolDefinition.call] still rejects

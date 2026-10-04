@@ -5,9 +5,8 @@ import 'package:analyzer/diagnostic/diagnostic.dart';
 import 'package:build/build.dart';
 import 'package:build_test/build_test.dart';
 import 'package:glob/glob.dart';
-import 'package:llm_tool_calling_generator/llm_tool_calling_generator.dart';
-import 'package:llm_tool_calling_generator/src/tool_generator.dart'
-    show toolListName;
+import 'package:llm_tool_generator/llm_tool_generator.dart';
+import 'package:llm_tool_generator/src/tool_generator.dart' show toolListName;
 import 'package:test/test.dart';
 
 void main() {
@@ -19,7 +18,7 @@ void main() {
     final source = File('example/example.dart').readAsStringSync();
     final result = await _build(source, path: 'lib/example.dart');
     final part = result.readerWriter.testing.readString(
-      AssetId('a', 'lib/example.llm_tool_calling.g.part'),
+      AssetId('a', 'lib/example.llm_tool.g.part'),
     );
     expect(
       File('example/example.g.dart').readAsStringSync(),
@@ -29,11 +28,21 @@ void main() {
     );
   });
 
+  test('the deprecated @Tool() still works until 1.0', () async {
+    final output = await _generate('''
+/// Doc.
+// ignore: deprecated_member_use
+@Tool()
+void f(String a) {}
+''');
+    expect(output, contains('final fTool = ToolDefinition('));
+  });
+
   group('schema', () {
     test('matches the full expected output for a typical tool', () async {
       final output = await _generate('''
 /// Gets the current weather for a city.
-@Tool()
+@LlmTool()
 String getWeather(
   @Param('City name') String city, {
   @Param('Use Celsius') bool celsius = true,
@@ -67,7 +76,7 @@ final getWeatherTool = ToolDefinition(
     test('maps every supported Dart type to a JSON type', () async {
       final output = await _generate('''
 /// Doc.
-@Tool()
+@LlmTool()
 void f(String s, int i, double d, num n, bool b) {}
 ''');
       expect(output, contains('"s": {"type": "string"}'));
@@ -80,7 +89,7 @@ void f(String s, int i, double d, num n, bool b) {}
     test('omits the description key when there is no @Param', () async {
       final output = await _generate('''
 /// Doc.
-@Tool()
+@LlmTool()
 void f(String s) {}
 ''');
       expect(output, contains('"s": {"type": "string"}'));
@@ -89,7 +98,7 @@ void f(String s) {}
     test('a tool without parameters has an empty schema', () async {
       final output = await _generate('''
 /// Doc.
-@Tool()
+@LlmTool()
 String now() => '';
 ''');
       expect(output, contains('"properties": {}'));
@@ -102,7 +111,7 @@ String now() => '';
     test('required positional and required named are required', () async {
       final output = await _generate('''
 /// Doc.
-@Tool()
+@LlmTool()
 void f(String a, {required int b}) {}
 ''');
       expect(output, contains('"required": ["a", "b"]'));
@@ -115,7 +124,7 @@ void f(String a, {required int b}) {}
     test('optional positional nullable parameter is optional', () async {
       final output = await _generate('''
 /// Doc.
-@Tool()
+@LlmTool()
 void f([String? a]) {}
 ''');
       expect(output, contains('"required": []'));
@@ -125,7 +134,7 @@ void f([String? a]) {}
     test('nullable named parameter is optional', () async {
       final output = await _generate('''
 /// Doc.
-@Tool()
+@LlmTool()
 void f({String? a}) {}
 ''');
       expect(output, contains('"required": []'));
@@ -135,7 +144,7 @@ void f({String? a}) {}
     test('`required` but nullable named parameter is optional', () async {
       final output = await _generate('''
 /// Doc.
-@Tool()
+@LlmTool()
 void f({required String? a}) {}
 ''');
       expect(output, contains('"required": []'));
@@ -145,7 +154,7 @@ void f({required String? a}) {}
     test('positional arguments come before named ones', () async {
       final output = await _generate('''
 /// Doc.
-@Tool()
+@LlmTool()
 void f(String a, {String? b}) {}
 ''');
       expect(
@@ -159,7 +168,7 @@ void f(String a, {String? b}) {}
     test('a parameter with a default is optional and uses ??', () async {
       final output = await _generate('''
 /// Doc.
-@Tool()
+@LlmTool()
 void f({int count = 3}) {}
 ''');
       expect(output, contains('"required": []'));
@@ -169,7 +178,7 @@ void f({int count = 3}) {}
     test('optional positional default', () async {
       final output = await _generate('''
 /// Doc.
-@Tool()
+@LlmTool()
 void f([bool flag = false]) {}
 ''');
       expect(output, contains('f(args["flag"] as bool? ?? false)'));
@@ -178,7 +187,7 @@ void f([bool flag = false]) {}
     test('string default keeps its quotes', () async {
       final output = await _generate('''
 /// Doc.
-@Tool()
+@LlmTool()
 void f({String unit = 'metric'}) {}
 ''');
       expect(output, contains("unit: args[\"unit\"] as String? ?? 'metric'"));
@@ -189,7 +198,7 @@ void f({String unit = 'metric'}) {}
 const defaultCount = 2;
 
 /// Doc.
-@Tool()
+@LlmTool()
 void f({int count = defaultCount}) {}
 ''');
       expect(output, contains('?? defaultCount'));
@@ -200,7 +209,7 @@ void f({int count = defaultCount}) {}
     test('required double is read as num and converted', () async {
       final output = await _generate('''
 /// Doc.
-@Tool()
+@LlmTool()
 void f(double x) {}
 ''');
       expect(output, contains('f((args["x"] as num).toDouble())'));
@@ -209,7 +218,7 @@ void f(double x) {}
     test('double with an int-literal default compiles', () async {
       final output = await _generate('''
 /// Doc.
-@Tool()
+@LlmTool()
 void f({double x = 1}) {}
 ''');
       expect(output, contains('x: (args["x"] as num?)?.toDouble() ?? 1'));
@@ -218,7 +227,7 @@ void f({double x = 1}) {}
     test('nullable int is read as num and converted', () async {
       final output = await _generate('''
 /// Doc.
-@Tool()
+@LlmTool()
 void f({int? x}) {}
 ''');
       expect(output, contains('x: (args["x"] as num?)?.toInt()'));
@@ -227,7 +236,7 @@ void f({int? x}) {}
     test('num is cast directly', () async {
       final output = await _generate('''
 /// Doc.
-@Tool()
+@LlmTool()
 void f(num x) {}
 ''');
       expect(output, contains('f(args["x"] as num)'));
@@ -240,7 +249,7 @@ void f(num x) {}
     test('become a string schema listing the value names', () async {
       final output = await _generate('''
 $unitEnum/// Doc.
-@Tool()
+@LlmTool()
 void f(Unit unit) {}
 ''');
       expect(
@@ -257,7 +266,7 @@ void f(Unit unit) {}
     test('description comes after the enum values', () async {
       final output = await _generate('''
 $unitEnum/// Doc.
-@Tool()
+@LlmTool()
 void f(@Param('Temperature unit') Unit unit) {}
 ''');
       expect(output, contains('"description": "Temperature unit"'));
@@ -266,7 +275,7 @@ void f(@Param('Temperature unit') Unit unit) {}
     test('nullable enum is optional and stays null when missing', () async {
       final output = await _generate('''
 $unitEnum/// Doc.
-@Tool()
+@LlmTool()
 void f({Unit? unit}) {}
 ''');
       expect(output, contains('"required": []'));
@@ -281,7 +290,7 @@ void f({Unit? unit}) {}
     test('enum with a default value uses the default when missing', () async {
       final output = await _generate('''
 $unitEnum/// Doc.
-@Tool()
+@LlmTool()
 void f({Unit unit = Unit.celsius}) {}
 ''');
       expect(output, contains('"required": []'));
@@ -300,7 +309,7 @@ enum Size {
 }
 
 /// Doc.
-@Tool()
+@LlmTool()
 void f(Size size) {}
 ''');
       expect(output, contains('"enum": ["small", "large"]'));
@@ -308,14 +317,14 @@ void f(Size size) {}
 
     group('imported from another file', () {
       const units = {'a|lib/units.dart': 'enum Unit { celsius, fahrenheit }'};
-      const tool = '/// Doc.\n@Tool()\nvoid f(u.Unit unit) {}\n';
+      const tool = '/// Doc.\n@LlmTool()\nvoid f(u.Unit unit) {}\n';
 
       test('without a prefix', () async {
         final output = await _generate(
-          '/// Doc.\n@Tool()\nvoid f(Unit unit) {}\n',
+          '/// Doc.\n@LlmTool()\nvoid f(Unit unit) {}\n',
           extraSources: units,
           header:
-              "import 'package:llm_tool_calling/llm_tool_calling.dart';\n"
+              "import 'package:llm_tool/llm_tool.dart';\n"
               "import 'units.dart';\n\n"
               "part 'tools.g.dart';\n\n",
         );
@@ -328,7 +337,7 @@ void f(Size size) {}
           tool,
           extraSources: units,
           header:
-              "import 'package:llm_tool_calling/llm_tool_calling.dart';\n"
+              "import 'package:llm_tool/llm_tool.dart';\n"
               "import 'units.dart' as u;\n\n"
               "part 'tools.g.dart';\n\n",
         );
@@ -340,7 +349,7 @@ void f(Size size) {}
           tool,
           extraSources: units,
           header:
-              "import 'package:llm_tool_calling/llm_tool_calling.dart';\n"
+              "import 'package:llm_tool/llm_tool.dart';\n"
               "import 'units.dart' as u;\n"
               "import 'units.dart';\n\n"
               "part 'tools.g.dart';\n\n",
@@ -354,7 +363,7 @@ void f(Size size) {}
 enum _Mode { fast, safe }
 
 /// Doc.
-@Tool()
+@LlmTool()
 void f(_Mode mode) {}
 ''');
       expect(output, contains('_Mode.values.byName('));
@@ -365,7 +374,7 @@ void f(_Mode mode) {}
     test('List<String> becomes an array of strings', () async {
       final output = await _generate('''
 /// Doc.
-@Tool()
+@LlmTool()
 void f(@Param('Tags to add') List<String> tags) {}
 ''');
       expect(
@@ -385,7 +394,7 @@ void f(@Param('Tags to add') List<String> tags) {}
     test('items of every simple type are converted', () async {
       final output = await _generate('''
 /// Doc.
-@Tool()
+@LlmTool()
 void f(List<int> i, List<double> d, List<num> n, List<bool> b) {}
 ''');
       final code = _withoutSpaces(output);
@@ -402,7 +411,7 @@ void f(List<int> i, List<double> d, List<num> n, List<bool> b) {}
 enum Color { red, green }
 
 /// Doc.
-@Tool()
+@LlmTool()
 void f(List<Color> colors) {}
 ''');
       final code = _withoutSpaces(output);
@@ -416,7 +425,7 @@ void f(List<Color> colors) {}
     test('nested lists', () async {
       final output = await _generate('''
 /// Doc.
-@Tool()
+@LlmTool()
 void f(List<List<int>> grid) {}
 ''');
       final code = _withoutSpaces(output);
@@ -435,7 +444,7 @@ void f(List<List<int>> grid) {}
     test('nullable list is optional and stays null when missing', () async {
       final output = await _generate('''
 /// Doc.
-@Tool()
+@LlmTool()
 void f({List<String>? tags}) {}
 ''');
       expect(output, contains('"required": []'));
@@ -450,7 +459,7 @@ void f({List<String>? tags}) {}
     test('list with a default uses it when missing', () async {
       final output = await _generate('''
 /// Doc.
-@Tool()
+@LlmTool()
 void f({List<String> tags = const ['a']}) {}
 ''');
       expect(output, contains('"required": []'));
@@ -459,10 +468,10 @@ void f({List<String> tags = const ['a']}) {}
 
     test('list of an enum from a prefixed import', () async {
       final output = await _generate(
-        '/// Doc.\n@Tool()\nvoid f(List<u.Unit> units) {}\n',
+        '/// Doc.\n@LlmTool()\nvoid f(List<u.Unit> units) {}\n',
         extraSources: {'a|lib/units.dart': 'enum Unit { c, f }'},
         header:
-            "import 'package:llm_tool_calling/llm_tool_calling.dart';\n"
+            "import 'package:llm_tool/llm_tool.dart';\n"
             "import 'units.dart' as u;\n\n"
             "part 'tools.g.dart';\n\n",
       );
@@ -487,7 +496,7 @@ class Passenger {
     test('become a nested object schema', () async {
       final output = await _generate('''
 $passenger/// Doc.
-@Tool()
+@LlmTool()
 void book(Passenger passenger) {}
 ''');
       expect(
@@ -518,7 +527,7 @@ void book(Passenger passenger) {}
     test('@Param on the tool parameter replaces the class doc', () async {
       final output = await _generate('''
 $passenger/// Doc.
-@Tool()
+@LlmTool()
 void book(@Param('Who is flying') Passenger passenger) {}
 ''');
       expect(output, contains('"description": "Who is flying"'));
@@ -533,7 +542,7 @@ class Seat {
 }
 
 /// Doc.
-@Tool()
+@LlmTool()
 void f(Seat seat) {}
 ''');
       expect(output, contains('"description": "Row number"'));
@@ -548,7 +557,7 @@ void f(Seat seat) {}
     test('nullable class parameter stays null when missing', () async {
       final output = await _generate('''
 $passenger/// Doc.
-@Tool()
+@LlmTool()
 void book({Passenger? passenger}) {}
 ''');
       expect(output, contains('"required": []'));
@@ -571,7 +580,7 @@ class Booking {
 }
 
 /// Doc.
-@Tool()
+@LlmTool()
 void f(Booking booking) {}
 ''');
       final code = _withoutSpaces(output);
@@ -583,7 +592,7 @@ void f(Booking booking) {}
     test('list of classes', () async {
       final output = await _generate('''
 $passenger/// Doc.
-@Tool()
+@LlmTool()
 void book(List<Passenger> group) {}
 ''');
       final code = _withoutSpaces(output);
@@ -615,7 +624,7 @@ class Traveller {
 }
 
 /// Doc.
-@Tool()
+@LlmTool()
 void f(Traveller traveller) {}
 ''');
       final code = _withoutSpaces(output);
@@ -647,7 +656,7 @@ class _Point implements Point {
 }
 
 /// Doc.
-@Tool()
+@LlmTool()
 void f(Point point) {}
 ''');
       expect(_withoutSpaces(output), contains('f(((Mapjson)=>Point(x:'));
@@ -679,10 +688,10 @@ class Booking {
 
       test('defaults are rebuilt, with the import prefix', () async {
         final output = await _generate(
-          '/// Doc.\n@Tool()\nvoid f(m.Booking booking) {}\n',
+          '/// Doc.\n@LlmTool()\nvoid f(m.Booking booking) {}\n',
           extraSources: models,
           header:
-              "import 'package:llm_tool_calling/llm_tool_calling.dart';\n"
+              "import 'package:llm_tool/llm_tool.dart';\n"
               "import 'models.dart' as m;\n\n"
               "part 'tools.g.dart';\n\n",
         );
@@ -699,10 +708,10 @@ class Booking {
 
       test('a default that is not a literal is a clear error', () async {
         final result = await _build(
-          "import 'package:llm_tool_calling/llm_tool_calling.dart';\n"
+          "import 'package:llm_tool/llm_tool.dart';\n"
           "import 'trip.dart';\n\n"
           "part 'tools.g.dart';\n\n"
-          '/// Doc.\n@Tool()\nvoid f(Trip trip) {}\n',
+          '/// Doc.\n@LlmTool()\nvoid f(Trip trip) {}\n',
           extraSources: {
             'a|lib/trip.dart': '''
 class Stop {
@@ -737,7 +746,7 @@ class Person {
 }
 
 /// Doc.
-@Tool()
+@LlmTool()
 void f(Person person) {}
 '''),
           contains(
@@ -756,7 +765,7 @@ class Box<T> {
 }
 
 /// Doc.
-@Tool()
+@LlmTool()
 void f(Box<int> box) {}
 '''),
           contains('which is generic.'),
@@ -771,7 +780,7 @@ class Point {
 }
 
 /// Doc.
-@Tool()
+@LlmTool()
 void f(Point point) {}
 '''),
           contains('which has no unnamed constructor'),
@@ -786,7 +795,7 @@ abstract class Shape {
 }
 
 /// Doc.
-@Tool()
+@LlmTool()
 void f(Shape shape) {}
 '''),
           contains('which is abstract.'),
@@ -802,7 +811,7 @@ class Node {
 }
 
 /// Doc.
-@Tool()
+@LlmTool()
 void f(Node node) {}
 '''),
           contains('Field "node.next" has type Node?, which contains itself.'),
@@ -823,7 +832,7 @@ class B {
 }
 
 /// Doc.
-@Tool()
+@LlmTool()
 void f(A a) {}
 '''),
           contains('Field "a.b.a" has type A?, which contains itself.'),
@@ -844,7 +853,7 @@ class Line {
 }
 
 /// Doc.
-@Tool()
+@LlmTool()
 void f(Line line, Point extra) {}
 ''');
         expect(output, contains('Line('));
@@ -856,34 +865,68 @@ void f(Line line, Point extra) {}
     test('lists every tool in source order, named after the file', () async {
       final output = await _generate('''
 /// One.
-@Tool()
+@LlmTool()
 void one() {}
 
 /// Two.
-@Tool(name: 'second')
+@LlmTool(name: 'second')
 void two() {}
 ''');
       expect(
         _withoutSpaces(output),
-        contains('finalList<ToolDefinition>allTools=[oneTool,twoTool]'),
+        contains('finalallTools=[oneTool,twoTool]'),
       );
       expect(output, contains('/// Every tool in this file'));
     });
 
+    test('the list is typed by the common return type (no casts)', () async {
+      // The source uses the generated list; the compile check fails unless
+      // allTools is List<ToolDefinition<Command?>> and tools are typed.
+      await _generate('''
+sealed class Command {
+  const Command();
+}
+
+final class Analyze extends Command {
+  const Analyze();
+}
+
+final class Stats extends Command {
+  const Stats();
+}
+
+/// Analyze.
+@LlmTool()
+Analyze analyze() => const Analyze();
+
+/// Stats.
+@LlmTool()
+Future<Stats> stats() async => const Stats();
+
+/// Delete.
+@LlmTool()
+void delete() {}
+
+Future<Command?> firstCommand() => allTools.first({});
+Future<Analyze> analyzeTyped() => analyzeTool({});
+Future<Stats> statsTyped() => statsTool({});
+''');
+    });
+
     test('a single tool still gets a list', () async {
-      final output = await _generate('/// Doc.\n@Tool()\nvoid only() {}\n');
+      final output = await _generate('/// Doc.\n@LlmTool()\nvoid only() {}\n');
       expect(_withoutSpaces(output), contains('allTools=[onlyTool]'));
     });
 
     test('other file names give other list names', () async {
       final result = await _build(
-        "import 'package:llm_tool_calling/llm_tool_calling.dart';\n\n"
+        "import 'package:llm_tool/llm_tool.dart';\n\n"
         "part 'flight_booking.g.dart';\n\n"
-        '/// Doc.\n@Tool()\nvoid book() {}\n',
+        '/// Doc.\n@LlmTool()\nvoid book() {}\n',
         path: 'lib/flight_booking.dart',
       );
       final output = result.readerWriter.testing.readString(
-        AssetId('a', 'lib/flight_booking.llm_tool_calling.g.part'),
+        AssetId('a', 'lib/flight_booking.llm_tool.g.part'),
       );
       expect(_withoutSpaces(output), contains('flightBookingTools=[bookTool]'));
     });
@@ -906,16 +949,16 @@ void two() {}
 
   group('import prefixes', () {
     const prefixedHeader =
-        "import 'package:llm_tool_calling/llm_tool_calling.dart' as ltc;\n\n"
+        "import 'package:llm_tool/llm_tool.dart' as ltc;\n\n"
         "part 'tools.g.dart';\n\n";
 
-    test('llm_tool_calling imported with a prefix', () async {
+    test('llm_tool imported with a prefix', () async {
       final output = await _generate(
-        "/// Doc.\n@ltc.Tool()\nvoid f(@ltc.Param('City') String city) {}\n",
+        "/// Doc.\n@ltc.LlmTool()\nvoid f(@ltc.Param('City') String city) {}\n",
         header: prefixedHeader,
       );
       expect(output, contains('final fTool = ltc.ToolDefinition('));
-      expect(output, contains('final List<ltc.ToolDefinition> allTools'));
+      expect(output, contains('final allTools = ['));
       expect(output, contains('"description": "City"'));
     });
 
@@ -923,13 +966,13 @@ void two() {}
       final output = await _generate(
         // The other SDK's ToolDefinition is used by the app, unprefixed.
         'const otherDefinition = ToolDefinition();\n\n'
-        '/// Doc.\n@ltc.Tool()\nvoid f() {}\n',
+        '/// Doc.\n@ltc.LlmTool()\nvoid f() {}\n',
         extraSources: {
           'a|lib/other_sdk.dart':
               'class ToolDefinition { const ToolDefinition(); }',
         },
         header:
-            "import 'package:llm_tool_calling/llm_tool_calling.dart' as ltc;\n"
+            "import 'package:llm_tool/llm_tool.dart' as ltc;\n"
             "import 'other_sdk.dart';\n\n"
             "part 'tools.g.dart';\n\n",
       );
@@ -941,7 +984,7 @@ void two() {}
     test('the LLM sees the JSON name; Dart keeps its own name', () async {
       final output = await _generate('''
 /// Doc.
-@Tool()
+@LlmTool()
 void f(
   @Param('A game id', name: 'game_id') int gameId, {
   @Param('Move number', name: 'move_number') int moveNumber = 1,
@@ -975,7 +1018,7 @@ class Seat {
 }
 
 /// Doc.
-@Tool()
+@LlmTool()
 void f(Seat seat) {}
 ''');
       final code = _withoutSpaces(output);
@@ -987,7 +1030,7 @@ void f(Seat seat) {}
       expect(
         await _buildErrors('''
 /// Doc.
-@Tool()
+@LlmTool()
 void f(@Param('Id', name: 'game id') int gameId) {}
 '''),
         allOf(
@@ -1001,7 +1044,7 @@ void f(@Param('Id', name: 'game id') int gameId) {}
       expect(
         await _buildErrors('''
 /// Doc.
-@Tool()
+@LlmTool()
 void f(@Param('First', name: 'b') int a, int b) {}
 '''),
         contains('Two parameters are named "b" for the LLM.'),
@@ -1013,7 +1056,7 @@ void f(@Param('First', name: 'b') int a, int b) {}
     test('void function returns null', () async {
       final output = await _generate('''
 /// Doc.
-@Tool()
+@LlmTool()
 void f() {}
 ''');
       expect(output, contains('execute: (args) {'));
@@ -1024,7 +1067,7 @@ void f() {}
     test('async function returns its Future', () async {
       final output = await _generate('''
 /// Doc.
-@Tool()
+@LlmTool()
 Future<String> f(String a) async => a;
 ''');
       expect(output, contains('execute: (args) => f(args["a"] as String)'));
@@ -1033,7 +1076,7 @@ Future<String> f(String a) async => a;
     test('Future<void> function compiles', () async {
       final output = await _generate('''
 /// Doc.
-@Tool()
+@LlmTool()
 Future<void> f() async {}
 ''');
       expect(output, contains('execute: (args) => f()'));
@@ -1044,7 +1087,7 @@ Future<void> f() async {}
     test('custom name is used, variable keeps the function name', () async {
       final output = await _generate('''
 /// Doc.
-@Tool(name: 'get_weather')
+@LlmTool(name: 'get_weather')
 void getWeather() {}
 ''');
       expect(output, contains('final getWeatherTool = ToolDefinition('));
@@ -1054,7 +1097,7 @@ void getWeather() {}
     test('description argument wins over the doc comment', () async {
       final output = await _generate('''
 /// From the doc comment.
-@Tool(description: 'From the annotation.')
+@LlmTool(description: 'From the annotation.')
 void f() {}
 ''');
       expect(output, contains('description: "From the annotation."'));
@@ -1063,7 +1106,7 @@ void f() {}
 
     test('description argument works without a doc comment', () async {
       final output = await _generate('''
-@Tool(description: 'From the annotation.')
+@LlmTool(description: 'From the annotation.')
 void f() {}
 ''');
       expect(output, contains('description: "From the annotation."'));
@@ -1072,7 +1115,7 @@ void f() {}
     test('requiresConfirmation is passed through', () async {
       final output = await _generate('''
 /// Deletes a file.
-@Tool(requiresConfirmation: true)
+@LlmTool(requiresConfirmation: true)
 void deleteFile(String path) {}
 ''');
       expect(output, contains('requiresConfirmation: true'));
@@ -1081,11 +1124,11 @@ void deleteFile(String path) {}
     test('generates every tool in a file', () async {
       final output = await _generate('''
 /// One.
-@Tool()
+@LlmTool()
 void one() {}
 
 /// Two.
-@Tool()
+@LlmTool()
 void two() {}
 ''');
       expect(output, contains('final oneTool = '));
@@ -1098,7 +1141,7 @@ void two() {}
       final output = await _generate('''
 /// Gets the weather
 /// for a city.
-@Tool()
+@LlmTool()
 void f() {}
 ''');
       expect(output, contains('description: "Gets the weather for a city."'));
@@ -1109,7 +1152,7 @@ void f() {}
 /// First paragraph.
 ///
 /// Second paragraph.
-@Tool()
+@LlmTool()
 void f() {}
 ''');
       expect(output, contains(r'"First paragraph.\n\nSecond paragraph."'));
@@ -1121,7 +1164,7 @@ void f() {}
  * Block comment
  * description.
  */
-@Tool()
+@LlmTool()
 void f() {}
 ''');
       expect(output, contains('description: "Block comment description."'));
@@ -1130,7 +1173,7 @@ void f() {}
     test('single-line /** */ comment is cleaned', () async {
       final output = await _generate('''
 /** Short block. */
-@Tool()
+@LlmTool()
 void f() {}
 ''');
       expect(output, contains('description: "Short block."'));
@@ -1141,7 +1184,7 @@ void f() {}
     test(r'quotes and $ in descriptions are escaped', () async {
       final output = await _generate(r'''
 /// Costs $5 and says "hi" with a \ backslash.
-@Tool()
+@LlmTool()
 void f(@Param('Price in \$, e.g. "10"') num price) {}
 ''');
       expect(
@@ -1155,7 +1198,7 @@ void f(@Param('Price in \$, e.g. "10"') num price) {}
 
     test(r'${...} in a description is not interpolated', () async {
       final output = await _generate(r'''
-@Tool(description: 'Uses \${secret} literally.')
+@LlmTool(description: 'Uses \${secret} literally.')
 void f() {}
 ''');
       expect(output, contains(r'description: "Uses \${secret} literally."'));
@@ -1167,10 +1210,10 @@ void f() {}
       expect(
         await _buildErrors('''
 /// Doc.
-@Tool()
+@LlmTool()
 class NotAFunction {}
 '''),
-        contains('@Tool can only be used on top-level functions.'),
+        contains('@LlmTool can only be used on top-level functions.'),
       );
     });
 
@@ -1178,30 +1221,33 @@ class NotAFunction {}
       expect(
         await _buildErrors('''
 /// Doc.
-@Tool()
+@LlmTool()
 final notAFunction = 1;
 '''),
-        contains('@Tool can only be used on top-level functions.'),
+        contains('@LlmTool can only be used on top-level functions.'),
       );
     });
 
     // source_gen skips files without any top-level annotation before our
     // generator runs, so these files also contain a top-level tool.
     for (final (kind, container) in [
-      ('instance method', 'class C {\n  /// Doc.\n  @Tool()\n  void m() {}\n}'),
+      (
+        'instance method',
+        'class C {\n  /// Doc.\n  @LlmTool()\n  void m() {}\n}',
+      ),
       (
         'static method',
-        'class C {\n  /// Doc.\n  @Tool()\n  static void m() {}\n}',
+        'class C {\n  /// Doc.\n  @LlmTool()\n  static void m() {}\n}',
       ),
-      ('mixin method', 'mixin C {\n  /// Doc.\n  @Tool()\n  void m() {}\n}'),
+      ('mixin method', 'mixin C {\n  /// Doc.\n  @LlmTool()\n  void m() {}\n}'),
       (
         'extension method',
-        'extension C on int {\n  /// Doc.\n  @Tool()\n  void m() {}\n}',
+        'extension C on int {\n  /// Doc.\n  @LlmTool()\n  void m() {}\n}',
       ),
     ]) {
       test('@Tool on a $kind is an error, not silently ignored', () async {
         expect(
-          await _buildErrors('/// Doc.\n@Tool()\nvoid f() {}\n\n$container'),
+          await _buildErrors('/// Doc.\n@LlmTool()\nvoid f() {}\n\n$container'),
           contains('"C.m" is a method.'),
         );
       });
@@ -1214,7 +1260,7 @@ final notAFunction = 1;
         // on every build. Documented in the README instead.
         final result = await _build(
           '$_header'
-          'class C {\n  /// Doc.\n  @Tool()\n  void m() {}\n}',
+          'class C {\n  /// Doc.\n  @LlmTool()\n  void m() {}\n}',
         );
         expect(result.succeeded, isTrue);
         expect(result.outputs, isEmpty);
@@ -1225,17 +1271,17 @@ final notAFunction = 1;
       expect(
         await _buildErrors('''
 /// Doc.
-@Tool()
+@LlmTool()
 T f<T>(T a) => a;
 '''),
-        contains("@Tool functions can't be generic."),
+        contains("@LlmTool functions can't be generic."),
       );
     });
 
     test('missing description', () async {
       expect(
         await _buildErrors('''
-@Tool()
+@LlmTool()
 void f() {}
 '''),
         contains('Tool "f" needs a description.'),
@@ -1245,7 +1291,7 @@ void f() {}
     test('empty description argument', () async {
       expect(
         await _buildErrors('''
-@Tool(description: '')
+@LlmTool(description: '')
 void f() {}
 '''),
         contains('Tool "f" needs a description.'),
@@ -1256,7 +1302,7 @@ void f() {}
       expect(
         await _buildErrors('''
 ///
-@Tool()
+@LlmTool()
 void f() {}
 '''),
         contains('Tool "f" needs a description.'),
@@ -1275,7 +1321,7 @@ void f() {}
         expect(
           await _buildErrors('''
 /// Doc.
-@Tool(name: '$name')
+@LlmTool(name: '$name')
 void f() {}
 '''),
           contains('Tool name "$name" is invalid.'),
@@ -1287,7 +1333,7 @@ void f() {}
       expect(
         await _buildErrors(r'''
 /// Doc.
-@Tool()
+@LlmTool()
 void get$weather() {}
 '''),
         contains(r'Tool name "get$weather" is invalid.'),
@@ -1298,7 +1344,7 @@ void get$weather() {}
       expect(
         await _buildErrors(r'''
 /// Doc.
-@Tool()
+@LlmTool()
 void f(String a$b) {}
 '''),
         contains(r'Parameter "a$b" has a name some LLM providers reject'),
@@ -1314,7 +1360,7 @@ class P {
 }
 
 /// Doc.
-@Tool()
+@LlmTool()
 void f(P p) {}
 '''),
         contains(r'Field "p.$id" has a name some LLM providers reject'),
@@ -1324,7 +1370,7 @@ void f(P p) {}
     test('names starting with _ are fine', () async {
       final output = await _generate('''
 /// Doc.
-@Tool(name: '_internal-lookup')
+@LlmTool(name: '_internal-lookup')
 void f(String _key) {}
 ''');
       expect(output, contains('name: "_internal-lookup"'));
@@ -1334,7 +1380,7 @@ void f(String _key) {}
       expect(
         await _buildErrors('''
 /// Doc.
-@Tool()
+@LlmTool()
 void f(List<String?> x) {}
 '''),
         contains(
@@ -1359,7 +1405,7 @@ void f(List<String?> x) {}
         expect(
           await _buildErrors('''
 /// Doc.
-@Tool()
+@LlmTool()
 void f($type x) {}
 '''),
           allOf(
@@ -1372,7 +1418,7 @@ void f($type x) {}
   });
 }
 
-/// Source of the real llm_tool_calling package, so `@Tool` resolves.
+/// Source of the real llm_tool package, so `@Tool` resolves.
 late Map<String, String> _runtimeSources;
 
 Future<void> _loadRuntimeSources() async {
@@ -1380,14 +1426,14 @@ Future<void> _loadRuntimeSources() async {
   _runtimeSources = {};
   await for (final id in reader.findAssets(
     Glob('lib/**.dart'),
-    package: 'llm_tool_calling',
+    package: 'llm_tool',
   )) {
     _runtimeSources['$id'] = await reader.readAsString(id);
   }
 }
 
 const _header = '''
-import 'package:llm_tool_calling/llm_tool_calling.dart';
+import 'package:llm_tool/llm_tool.dart';
 
 part 'tools.g.dart';
 
@@ -1423,7 +1469,7 @@ Future<String> _generate(
   expect(result.succeeded, isTrue);
 
   final output = result.readerWriter.testing.readString(
-    AssetId('a', 'lib/tools.llm_tool_calling.g.part'),
+    AssetId('a', 'lib/tools.llm_tool.g.part'),
   );
   expect(
     await _compileErrors(source, output, extraSources),

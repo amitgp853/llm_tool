@@ -1,3 +1,15 @@
+## 0.3.0
+
+- **Renamed from `llm_tool_calling_firebase_ai`** (now discontinued), to go
+  with the core package's new name, `llm_tool`. Import
+  `package:llm_tool_firebase_ai/llm_tool_firebase_ai.dart`.
+- `toFirebaseAITool()` replaces `toFirebaseAiTool()` (Dart style for
+  two-letter acronyms); the old name is deprecated until 1.0.0. The
+  extensions are now `ToolDefinitionFirebaseAI` and `ToolListFirebaseAI`.
+- The re-export of `llm_tool_calling` leaves out the annotations
+  (`LlmTool`, `Param` and the deprecated `Tool`).
+- Requires `llm_tool_calling` 0.7.0.
+
 ## 0.2.0
 
 - Uses `ToolDefinition.invoke` from `llm_tool_calling` 0.6.0, so tools behave

@@ -1,5 +1,5 @@
 import 'package:firebase_ai/firebase_ai.dart';
-import 'package:llm_tool_calling_firebase_ai/llm_tool_calling_firebase_ai.dart';
+import 'package:llm_tool_firebase_ai/llm_tool_firebase_ai.dart';
 
 import 'tools.dart';
 
@@ -188,7 +188,7 @@ Future<String> _manual(FirebaseAI ai) async {
 /// flutterfire#18685, so this should pass once a release includes it.
 Future<String> _firebaseAutomatic(FirebaseAI ai) async {
   final chat = ai
-      .generativeModel(model: modelName, tools: [allTools.toFirebaseAiTool()])
+      .generativeModel(model: modelName, tools: [allTools.toFirebaseAITool()])
       .startChat();
   final reply = await chat.sendMessage(
     Content.text('What is the weather in Delhi? Use the getWeather tool.'),

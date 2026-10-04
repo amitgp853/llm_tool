@@ -1,8 +1,8 @@
 import 'package:firebase_ai/firebase_ai.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:llm_tool_calling_firebase_ai/llm_tool_calling_firebase_ai.dart';
+import 'package:llm_tool_firebase_ai/llm_tool_firebase_ai.dart';
 
-/// The schema llm_tool_calling_generator writes for
+/// The schema llm_tool_generator writes for
 /// `bookFlight(String from, List<Passenger> passengers, {Cabin cabin})`.
 final _bookFlightSchema = <String, Object?>{
   'type': 'object',
@@ -116,8 +116,8 @@ void main() {
       );
     });
 
-    test('toFirebaseAiTool includes every tool', () {
-      final tool = [_tool(name: 'one'), _tool(name: 'two')].toFirebaseAiTool();
+    test('toFirebaseAITool includes every tool', () {
+      final tool = [_tool(name: 'one'), _tool(name: 'two')].toFirebaseAITool();
       expect(tool.autoFunctionDeclarations.map((d) => d.name), ['one', 'two']);
       final declarations = (tool.toJson()['functionDeclarations']! as List)
           .cast<Map>();
@@ -252,6 +252,13 @@ void main() {
     });
   });
 
+  test('the deprecated toFirebaseAiTool still works until 1.0', () {
+    final tool = [
+      _tool(name: 'one'),
+    ].toFirebaseAiTool(); // ignore: deprecated_member_use, deprecated_member_use_from_same_package
+    expect(tool.autoFunctionDeclarations.single.name, 'one');
+  });
+
   group('duplicate tool names', () {
     final tools = [_tool(name: 'getWeather'), _tool(name: 'getWeather')];
     final error = throwsA(
@@ -263,8 +270,8 @@ void main() {
       ),
     );
 
-    test('toFirebaseAiTool refuses them', () {
-      expect(tools.toFirebaseAiTool, error);
+    test('toFirebaseAITool refuses them', () {
+      expect(tools.toFirebaseAITool, error);
     });
 
     test('toFunctionDeclarations refuses them', () {

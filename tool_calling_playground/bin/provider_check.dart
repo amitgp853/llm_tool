@@ -19,7 +19,7 @@
 import 'dart:convert';
 import 'dart:io';
 
-import 'package:llm_tool_calling/llm_tool_calling.dart';
+import 'package:llm_tool/llm_tool.dart';
 import 'package:tool_calling_playground/tools.dart';
 
 const _prompt =

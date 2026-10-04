@@ -1,32 +1,32 @@
-# llm_tool_calling_generator
+# llm_tool_generator
 
-**The code generator for [`llm_tool_calling`](https://pub.dev/packages/llm_tool_calling):
+**The code generator for [`llm_tool`](https://pub.dev/packages/llm_tool):
 turn any Dart function into an LLM tool with one annotation. No hand-written JSON schemas.**
 
-For every `@Tool()` function it generates a `ToolDefinition` with the JSON
+For every `@LlmTool()` function it generates a `ToolDefinition` with the JSON
 Schema for the LLM, argument validation and type-safe dispatch.
 
 The full documentation, including supported types, validation and errors, and
 how to send tools to OpenAI, Anthropic or Gemini, is in the
-[`llm_tool_calling` README](https://pub.dev/packages/llm_tool_calling).
+[`llm_tool` README](https://pub.dev/packages/llm_tool).
 
 ## Quick start
 
 **1. Install**
 
 ```sh
-dart pub add llm_tool_calling dev:llm_tool_calling_generator dev:build_runner
+dart pub add llm_tool dev:llm_tool_generator dev:build_runner
 ```
 
 **2. Write a tool**
 
 ```dart
-import 'package:llm_tool_calling/llm_tool_calling.dart';
+import 'package:llm_tool/llm_tool.dart';
 
 part 'tools.g.dart';
 
 /// Gets the current weather for a city.
-@Tool()
+@LlmTool()
 String getWeather(
   @Param('City name, e.g. Kanpur') String city, {
   @Param('Use Celsius instead of Fahrenheit') bool celsius = true,
@@ -84,40 +84,40 @@ The list is named after the file: `tools.dart` gives `allTools`,
 - `String`, `int`, `double`, `num`, `bool`, enum, class and `List`
   parameters (lists of any of these, including nested lists): positional or
   named, nullable or not, with or without defaults.
-- Descriptions from `@Tool(description: ...)` or the doc comment.
+- Descriptions from `@LlmTool(description: ...)` or the doc comment.
 - Custom JSON names with `@Param('...', name: 'game_id')`, so your Dart
   code keeps camelCase while the LLM sees snake case.
 
 - Class parameters become nested object schemas, built through the class's
   unnamed constructor. freezed classes work too. See
-  [Class parameters](https://pub.dev/packages/llm_tool_calling#class-parameters).
+  [Class parameters](https://pub.dev/packages/llm_tool#class-parameters).
 
 Anything else is a **build-time error** with a message explaining the fix:
 unsupported types, missing descriptions, tool names that LLM providers would
-reject, generic functions, and `@Tool` on methods.
+reject, generic functions, and `@LlmTool` on methods.
 
 ## Troubleshooting
 
 **`Undefined name 'getWeatherTool'`**: add `part 'your_file.g.dart';` and run
-`dart run build_runner build`. `@Tool` only works on top-level functions; in a
-file with no other top-level annotation, a `@Tool` method is skipped without a
+`dart run build_runner build`. `@LlmTool` only works on top-level functions; in a
+file with no other top-level annotation, a `@LlmTool` method is skipped without a
 message.
 
 **`The name 'ToolDefinition' is defined in the libraries ...`**: another
 package (e.g. `flutter_ai_core`) also has a `ToolDefinition`. Import
-`llm_tool_calling` with a prefix (`as ltc`) and use `@ltc.Tool()`; the
+`llm_tool` with a prefix (`as ltc`) and use `@ltc.Tool()`; the
 generated code follows your prefix.
 
 **`Conflicting outputs were detected`**: run
 `dart run build_runner build --delete-conflicting-outputs`.
 
 More in the
-[full troubleshooting guide](https://pub.dev/packages/llm_tool_calling#troubleshooting).
+[full troubleshooting guide](https://pub.dev/packages/llm_tool#troubleshooting).
 
 ## Author
 
 Built and maintained by [Amit Gupta](https://github.com/amitgp853).
 Bug reports, ideas and pull requests are welcome on
-[GitHub](https://github.com/amitgp853/llm_tool_calling/issues).
+[GitHub](https://github.com/amitgp853/llm_tool/issues).
 If this package saves you time, a like on pub.dev or a star on GitHub helps
 others find it.

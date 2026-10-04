@@ -1,4 +1,4 @@
-import 'package:llm_tool_calling/llm_tool_calling.dart';
+import 'package:llm_tool/llm_tool.dart';
 import 'package:test/test.dart';
 
 const _schema = <String, Object?>{
@@ -194,7 +194,55 @@ void main() {
         ),
       );
       expect(() => duplicates.invoke('getWeather', {}), error);
-      expect(duplicates.toOpenAiJson, error);
+      expect(duplicates.toOpenAIJson, error);
     });
   });
+
+  group('typed ToolDefinition<T>', () {
+    test('T is inferred from execute; call returns T without a cast', () async {
+      final tool = ToolDefinition(
+        name: 'count',
+        description: 'Counts.',
+        parametersSchema: const {'type': 'object', 'properties': {}},
+        execute: (_) async => 42,
+      );
+      expect(tool, isA<ToolDefinition<int>>());
+      final int value = await tool({}); // compiles only if call returns int
+      expect(value, 42);
+    });
+
+    test('a list of tools gets their common return type', () async {
+      final tools = [
+        ToolDefinition(
+          name: 'a',
+          description: 'A.',
+          parametersSchema: const {'type': 'object', 'properties': {}},
+          execute: (_) => const _Analyze(),
+        ),
+        ToolDefinition(
+          name: 'b',
+          description: 'B.',
+          parametersSchema: const {'type': 'object', 'properties': {}},
+          execute: (_) => const _Stats(),
+        ),
+      ];
+      expect(tools, isA<List<ToolDefinition<_Command>>>());
+      final _Command command = await tools.first({}); // no cast needed
+      expect(command, isA<_Analyze>());
+      // The list methods still work on typed lists:
+      expect((await tools.invoke('b', {})).isError, isFalse);
+    });
+  });
+}
+
+sealed class _Command {
+  const _Command();
+}
+
+final class _Analyze extends _Command {
+  const _Analyze();
+}
+
+final class _Stats extends _Command {
+  const _Stats();
 }

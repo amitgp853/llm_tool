@@ -1,7 +1,7 @@
 # firebase_live_check
 
 Not published. A small Flutter web app that checks
-`llm_tool_calling_firebase_ai` against **real Gemini**, using tools made by
+`llm_tool_firebase_ai` against **real Gemini**, using tools made by
 the published generator (including nested classes, lists and enums).
 
 It runs four checks per backend:

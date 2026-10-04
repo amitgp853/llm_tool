@@ -1,11 +1,11 @@
-import 'package:llm_tool_calling/llm_tool_calling.dart';
+import 'package:llm_tool/llm_tool.dart';
 
 import 'models.dart' as models;
 
 part 'tools.g.dart';
 
 /// Gets the current weather for a city.
-@Tool()
+@LlmTool()
 String getWeather(
   @Param('City name, e.g. Kanpur') String city, {
   @Param('Use Celsius instead of Fahrenheit') bool celsius = true,
@@ -14,7 +14,7 @@ String getWeather(
 enum TemperatureUnit { celsius, fahrenheit, kelvin }
 
 /// Converts a temperature between units.
-@Tool()
+@LlmTool()
 double convertTemperature(
   @Param('The temperature to convert') double value,
   @Param('Unit to convert from') TemperatureUnit from, {
@@ -33,7 +33,7 @@ double convertTemperature(
 }
 
 /// Averages a list of temperatures, converting each to one unit first.
-@Tool()
+@LlmTool()
 double averageTemperature(
   @Param('Readings to average') List<double> readings, {
   @Param('Unit of each reading, same order as readings')
@@ -47,7 +47,7 @@ double averageTemperature(
 }
 
 /// Books a flight and returns a confirmation summary.
-@Tool(requiresConfirmation: true)
+@LlmTool(requiresConfirmation: true)
 String bookFlight(models.Booking booking) {
   final names = booking.passengers.map((p) => '${p.name} (${p.bags} bags)');
   return '${booking.from}->${booking.to}, ${booking.cabin.name}: '
@@ -55,7 +55,7 @@ String bookFlight(models.Booking booking) {
 }
 
 /// Gets one move of a game by its number.
-@Tool(name: 'get_move')
+@LlmTool(name: 'get_move')
 String getMove(
   @Param('A game id', name: 'game_id') int gameId,
   @Param('Move number', name: 'move_number') int moveNumber, {

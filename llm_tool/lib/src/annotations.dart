@@ -7,10 +7,10 @@ import 'tool_definition.dart';
 ///
 /// ```dart
 /// /// Gets the current weather for a city.
-/// @Tool()
+/// @LlmTool()
 /// String getWeather(@Param('City name, e.g. Kanpur') String city) => '...';
 /// ```
-class Tool {
+class LlmTool {
   /// The name sent to the LLM. Defaults to the function name.
   ///
   /// Must start with a letter or `_`, then letters, digits, `_` or `-`, up
@@ -24,15 +24,27 @@ class Tool {
 
   /// Whether a human should approve each call before it runs.
   ///
-  /// Copied to [ToolDefinition.requiresConfirmation]. Your agent loop decides
-  /// how to ask; this flag only records the intent.
+  /// Copied to [ToolDefinition.requiresConfirmation]. [ToolDefinition.invoke]
+  /// only runs such a tool when its `confirm` callback approves.
   final bool requiresConfirmation;
 
   /// Marks a function as a tool. See the class docs for an example.
-  const Tool({this.name, this.description, this.requiresConfirmation = false});
+  const LlmTool({
+    this.name,
+    this.description,
+    this.requiresConfirmation = false,
+  });
 }
 
-/// Describes one parameter of a [Tool] function to the LLM.
+/// The previous name of [LlmTool]; works the same.
+///
+/// Renamed because almost every AI SDK (firebase_ai, openai_dart,
+/// anthropic_sdk_dart, mcp_dart) also has a class called `Tool`, which
+/// clashes in files that import both.
+@Deprecated('Use @LlmTool() instead. Tool will be removed in 1.0.0.')
+typedef Tool = LlmTool;
+
+/// Describes one parameter of an [LlmTool] function to the LLM.
 ///
 /// Optional, but good descriptions make the LLM call your tool correctly far
 /// more often.

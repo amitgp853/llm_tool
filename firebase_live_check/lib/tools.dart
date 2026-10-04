@@ -1,4 +1,4 @@
-import 'package:llm_tool_calling/llm_tool_calling.dart';
+import 'package:llm_tool/llm_tool.dart';
 
 part 'tools.g.dart';
 
@@ -23,14 +23,14 @@ class Passenger {
 }
 
 /// Gets the current weather for a city.
-@Tool()
+@LlmTool()
 String getWeather(@Param('City name, e.g. Kanpur') String city) {
   toolCalls.add((tool: 'getWeather', args: {'city': city}));
   return 'Sunny, 31°C in $city';
 }
 
 /// Books a flight for one or more passengers.
-@Tool(requiresConfirmation: true)
+@LlmTool(requiresConfirmation: true)
 String bookFlight(
   @Param('Departure airport code, e.g. DEL') String from,
   @Param('Arrival airport code, e.g. BOM') String to,
@@ -53,7 +53,7 @@ String bookFlight(
 }
 
 /// Deletes a file from the user's device.
-@Tool(requiresConfirmation: true)
+@LlmTool(requiresConfirmation: true)
 String deleteFile(@Param('Path of the file to delete') String path) {
   toolCalls.add((tool: 'deleteFile', args: {'path': path}));
   return 'Deleted $path';

@@ -66,9 +66,7 @@ class _LiveCheckPageState extends State<LiveCheckPage> {
 
   @override
   Widget build(BuildContext context) => Scaffold(
-    appBar: AppBar(
-      title: const Text('llm_tool_calling_firebase_ai live check'),
-    ),
+    appBar: AppBar(title: const Text('llm_tool_firebase_ai live check')),
     body: Column(
       children: [
         Padding(

@@ -1,9 +1,9 @@
-name: llm_tool_calling
-description: Turn Dart functions into LLM tools for OpenAI, Gemini and Claude. Annotate with @Tool to generate the JSON schema, argument validation and type-safe dispatch.
-version: 0.6.2
-repository: https://github.com/amitgp853/llm_tool_calling/tree/main/llm_tool_calling
+name: llm_tool
+description: Turn Dart functions into LLM tools for OpenAI, Gemini, Claude and MCP. Annotate with @LlmTool to generate the JSON schema, argument validation and typed calls.
+version: 0.7.0
+repository: https://github.com/amitgp853/llm_tool/tree/main/llm_tool
 homepage: https://amitgp.dev
-issue_tracker: https://github.com/amitgp853/llm_tool_calling/issues
+issue_tracker: https://github.com/amitgp853/llm_tool/issues
 topics:
   - llm
   - tool-calling

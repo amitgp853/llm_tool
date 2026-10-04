@@ -1,7 +1,7 @@
 // Each provider format is checked against that provider's real Dart SDK:
 // the SDK must read our JSON, and give the same JSON back.
 import 'package:anthropic_sdk_dart/anthropic_sdk_dart.dart' as anthropic;
-import 'package:llm_tool_calling/llm_tool_calling.dart';
+import 'package:llm_tool/llm_tool.dart';
 import 'package:mcp_dart/mcp_dart.dart' as mcp;
 import 'package:openai_dart/openai_dart.dart' as openai;
 import 'package:test/test.dart';
@@ -42,7 +42,7 @@ final _tool = ToolDefinition(
 
 void main() {
   test('OpenAI Chat Completions', () {
-    final json = _tool.toOpenAiJson();
+    final json = _tool.toOpenAIJson();
     expect(json, {
       'type': 'function',
       'function': {
@@ -65,7 +65,7 @@ void main() {
   });
 
   test('OpenAI Responses API', () {
-    final json = _tool.toOpenAiResponsesJson();
+    final json = _tool.toOpenAIResponsesJson();
     final tool = openai.ResponseTool.fromJson(json);
     expect(tool, isA<openai.FunctionTool>());
     tool as openai.FunctionTool;
@@ -114,6 +114,13 @@ void main() {
     });
   });
 
+  test('the deprecated toOpenAiJson names still work until 1.0', () {
+    // ignore: deprecated_member_use_from_same_package
+    expect(_tool.toOpenAiJson(), _tool.toOpenAIJson());
+    // ignore: deprecated_member_use_from_same_package
+    expect([_tool].toOpenAiResponsesJson(), [_tool].toOpenAIResponsesJson());
+  });
+
   test('lists keep the order of the tools', () {
     final other = ToolDefinition(
       name: 'other',
@@ -122,8 +129,8 @@ void main() {
       execute: (_) => null,
     );
     for (final json in [
-      [_tool, other].toOpenAiJson().map((t) => (t['function'] as Map)['name']),
-      [_tool, other].toOpenAiResponsesJson().map((t) => t['name']),
+      [_tool, other].toOpenAIJson().map((t) => (t['function'] as Map)['name']),
+      [_tool, other].toOpenAIResponsesJson().map((t) => t['name']),
       [_tool, other].toAnthropicJson().map((t) => t['name']),
       [_tool, other].toGeminiJson().map((t) => t['name']),
       [_tool, other].toMcpJson().map((t) => t['name']),

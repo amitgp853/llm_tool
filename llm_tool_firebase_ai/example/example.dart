@@ -1,12 +1,12 @@
-// Using llm_tool_calling tools with Firebase AI Logic.
+// Using llm_tool with Firebase AI Logic.
 //
 // In a real app, write the tools as @Tool() functions and let
-// llm_tool_calling_generator create `allTools` for you (see the
-// llm_tool_calling README). A hand-written tool is used here so the example
+// llm_tool_generator create `allTools` for you (see the
+// llm_tool README). A hand-written tool is used here so the example
 // runs without code generation.
 import 'package:firebase_ai/firebase_ai.dart';
 import 'package:firebase_core/firebase_core.dart';
-import 'package:llm_tool_calling_firebase_ai/llm_tool_calling_firebase_ai.dart';
+import 'package:llm_tool_firebase_ai/llm_tool_firebase_ai.dart';
 
 final allTools = [
   ToolDefinition(

@@ -1,25 +1,25 @@
 // 1. Add dependencies:
-//      dart pub add llm_tool_calling
-//      dart pub add dev:llm_tool_calling_generator dev:build_runner
-// 2. Annotate functions with @Tool() and add the `part` directive.
+//      dart pub add llm_tool
+//      dart pub add dev:llm_tool_generator dev:build_runner
+// 2. Annotate functions with @LlmTool() and add the `part` directive.
 // 3. Run: dart run build_runner build
 //    This writes example.g.dart with a ToolDefinition per function, plus
 //    `exampleTools`, a list of all of them (named after this file).
 import 'dart:convert';
 
-import 'package:llm_tool_calling/llm_tool_calling.dart';
+import 'package:llm_tool/llm_tool.dart';
 
 part 'example.g.dart';
 
 /// Gets the current weather for a city.
-@Tool()
+@LlmTool()
 String getWeather(
   @Param('City name, e.g. Kanpur') String city, {
   @Param('Use Celsius instead of Fahrenheit') bool celsius = true,
 }) => 'Sunny, ${celsius ? '31°C' : '88°F'} in $city';
 
 /// Converts an amount between two currencies.
-@Tool(name: 'convert_currency')
+@LlmTool(name: 'convert_currency')
 Future<double> convertCurrency(
   @Param('Amount to convert') double amount,
   @Param('ISO code to convert from, e.g. USD') String from,
@@ -27,7 +27,7 @@ Future<double> convertCurrency(
 ) async => amount * 83.2; // A real tool would call an exchange-rate API.
 
 /// Deletes a file from the user's device.
-@Tool(requiresConfirmation: true)
+@LlmTool(requiresConfirmation: true)
 void deleteFile(@Param('Path of the file to delete') String path) {}
 
 Future<void> main() async {

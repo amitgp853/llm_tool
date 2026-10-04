@@ -6,18 +6,16 @@ import 'package:analyzer/dart/element/element.dart';
 import 'package:analyzer/dart/element/nullability_suffix.dart';
 import 'package:analyzer/dart/element/type.dart';
 import 'package:build/build.dart';
-import 'package:llm_tool_calling/llm_tool_calling.dart';
+import 'package:llm_tool/llm_tool.dart';
 import 'package:source_gen/source_gen.dart';
 
-final _paramChecker = TypeChecker.typeNamed(
-  Param,
-  inPackage: 'llm_tool_calling',
-);
+final _paramChecker = TypeChecker.typeNamed(Param, inPackage: 'llm_tool');
 
-final _toolChecker = TypeChecker.typeNamed(Tool, inPackage: 'llm_tool_calling');
+final _toolChecker = TypeChecker.typeNamed(LlmTool, inPackage: 'llm_tool');
 
-class ToolGenerator extends GeneratorForAnnotation<Tool> {
-  ToolGenerator() : super(inPackage: 'llm_tool_calling');
+/// Also handles the deprecated `@Tool()`, which is the same class.
+class ToolGenerator extends GeneratorForAnnotation<LlmTool> {
+  ToolGenerator() : super(inPackage: 'llm_tool');
 
   /// Generates every tool, then a list of all tools in the file.
   @override
@@ -35,11 +33,12 @@ class ToolGenerator extends GeneratorForAnnotation<Tool> {
 $tools
 
 /// Every tool in this file, e.g. to send to an LLM or look up by name.
-final List<${_toolDefinitionName(library.element)}> $listName = [${names.join(', ')}];
+/// Typed by the tools' common return type, so calling one needs no cast.
+final $listName = [${names.join(', ')}];
 ''';
   }
 
-  /// GeneratorForAnnotation only looks at top-level declarations, so @Tool on
+  /// GeneratorForAnnotation only looks at top-level declarations, so @LlmTool on
   /// a method would be silently ignored. Fail loudly instead.
   void _checkNoToolMethods(LibraryElement lib) {
     final containers = <InstanceElement>[
@@ -53,7 +52,7 @@ final List<${_toolDefinitionName(library.element)}> $listName = [${names.join(',
       for (final method in container.methods) {
         if (_toolChecker.hasAnnotationOf(method)) {
           throw InvalidGenerationSource(
-            '@Tool can only be used on top-level functions, but '
+            '@LlmTool can only be used on top-level functions, but '
             '"${container.displayName}.${method.displayName}" is a method. '
             'Move it to a top-level function.',
             element: method,
@@ -69,16 +68,16 @@ final List<${_toolDefinitionName(library.element)}> $listName = [${names.join(',
     ConstantReader annotation,
     BuildStep buildStep,
   ) {
-    // 1. @Tool only makes sense on top-level functions.
+    // 1. @LlmTool only makes sense on top-level functions.
     if (element is! TopLevelFunctionElement) {
       throw InvalidGenerationSource(
-        '@Tool can only be used on top-level functions.',
+        '@LlmTool can only be used on top-level functions.',
         element: element,
       );
     }
     if (element.typeParameters.isNotEmpty) {
       throw InvalidGenerationSource(
-        '@Tool functions can\'t be generic. Remove the type parameters from '
+        '@LlmTool functions can\'t be generic. Remove the type parameters from '
         '"${element.displayName}".',
         element: element,
       );
@@ -92,7 +91,7 @@ final List<${_toolDefinitionName(library.element)}> $listName = [${names.join(',
       throw InvalidGenerationSource(
         'Tool name "$toolName" is invalid. To work with every LLM provider it '
         'must start with a letter or "_", then use only letters, digits, "_" '
-        'or "-", up to 63 characters. Use @Tool(name: ...) to set a valid '
+        'or "-", up to 63 characters. Use @LlmTool(name: ...) to set a valid '
         'one.',
         element: element,
       );
@@ -103,7 +102,7 @@ final List<${_toolDefinitionName(library.element)}> $listName = [${names.join(',
     if (description == null || description.isEmpty) {
       throw InvalidGenerationSource(
         'Tool "$functionName" needs a description. Add a /// doc comment '
-        'or use @Tool(description: ...).',
+        'or use @LlmTool(description: ...).',
         element: element,
       );
     }
@@ -433,7 +432,7 @@ DartType? _listItemType(DartType type) =>
     ? type.typeArguments.single
     : null;
 
-/// How the generated code names llm_tool_calling's `ToolDefinition`:
+/// How the generated code names llm_tool's `ToolDefinition`:
 /// `ToolDefinition`, or `ltc.ToolDefinition` when the package is imported
 /// `as ltc` (e.g. to avoid a clash with another package's `ToolDefinition`).
 String _toolDefinitionName(LibraryElement library) {
@@ -442,9 +441,7 @@ String _toolDefinitionName(LibraryElement library) {
       'ToolDefinition',
     );
     if (element != null &&
-        element.library?.uri.toString().startsWith(
-              'package:llm_tool_calling/',
-            ) ==
+        element.library?.uri.toString().startsWith('package:llm_tool/') ==
             true) {
       return _referenceTo(element, library);
     }

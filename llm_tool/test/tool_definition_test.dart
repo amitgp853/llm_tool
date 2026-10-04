@@ -1,6 +1,6 @@
 import 'dart:convert';
 
-import 'package:llm_tool_calling/llm_tool_calling.dart';
+import 'package:llm_tool/llm_tool.dart';
 import 'package:test/test.dart';
 
 void main() {

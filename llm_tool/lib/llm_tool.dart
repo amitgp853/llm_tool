@@ -1,7 +1,7 @@
 /// Annotate Dart functions with `@Tool()` and get LLM tool definitions:
 /// JSON schema, argument validation and type-safe dispatch.
 ///
-/// Add `llm_tool_calling_generator` and `build_runner` as dev dependencies
+/// Add `llm_tool_generator` and `build_runner` as dev dependencies
 /// to generate a [ToolDefinition] for every [Tool] function.
 library;
 

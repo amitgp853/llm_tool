@@ -1,9 +1,9 @@
-name: llm_tool_calling_generator
-description: Code generator for llm_tool_calling. Turns @Tool-annotated Dart functions into LLM tools for OpenAI, Gemini and Claude, with JSON schemas and validation.
-version: 0.6.1
-repository: https://github.com/amitgp853/llm_tool_calling/tree/main/llm_tool_calling_generator
+name: llm_tool_generator
+description: Code generator for llm_tool. Turns @LlmTool-annotated Dart functions into LLM tools for OpenAI, Gemini, Claude and MCP, with JSON schemas and validation.
+version: 0.7.0
+repository: https://github.com/amitgp853/llm_tool/tree/main/llm_tool_generator
 homepage: https://amitgp.dev
-issue_tracker: https://github.com/amitgp853/llm_tool_calling/issues
+issue_tracker: https://github.com/amitgp853/llm_tool/issues
 topics:
   - llm
   - tool-calling
@@ -18,7 +18,7 @@ environment:
 dependencies:
   analyzer: ^14.0.0
   build: ^4.0.10
-  llm_tool_calling: ^0.6.0
+  llm_tool: ^0.7.0
   source_gen: ^4.2.4
 
 dev_dependencies:

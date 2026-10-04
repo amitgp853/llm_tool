@@ -1,3 +1,15 @@
+## 0.7.0
+
+- **Renamed from `llm_tool_calling_generator`** (now discontinued), to go
+  with the core package's new name, `llm_tool`. The builder is now
+  `llm_tool_generator:llm_tool`, and generated parts are `.llm_tool.g.part`.
+- Recognizes `@LlmTool()`, and still the deprecated `@Tool()`.
+- Generated tools are typed by their function's return type (e.g.
+  `ToolDefinition<String>`), and the list of all tools by their common
+  return type (e.g. `List<ToolDefinition<Command>>`), so calling a tool
+  needs no cast.
+- Requires `llm_tool_calling` 0.7.0.
+
 ## 0.6.1
 
 - Added the package homepage (https://amitgp.dev).

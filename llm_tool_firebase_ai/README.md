@@ -1,8 +1,8 @@
-# llm_tool_calling_firebase_ai
+# llm_tool_firebase_ai
 
-**Use [`llm_tool_calling`](https://pub.dev/packages/llm_tool_calling) tools
+**Use [`llm_tool`](https://pub.dev/packages/llm_tool) tools
 with Firebase AI Logic ([`firebase_ai`](https://pub.dev/packages/firebase_ai)).
-Your `@Tool()` functions become Gemini function declarations, with no
+Your `@LlmTool()` functions become Gemini function declarations, with no
 hand-written `Schema` objects, and one call runs the whole tool loop.**
 
 ```dart
@@ -20,21 +20,21 @@ print(reply.text); // The weather in Kanpur is currently sunny and 31°C.
 ## Install
 
 ```sh
-flutter pub add llm_tool_calling llm_tool_calling_firebase_ai firebase_ai
-flutter pub add dev:llm_tool_calling_generator dev:build_runner
+flutter pub add llm_tool llm_tool_firebase_ai firebase_ai
+flutter pub add dev:llm_tool_generator dev:build_runner
 ```
 
 Write your tools and generate `allTools` as described in the
-[llm_tool_calling quick start](https://pub.dev/packages/llm_tool_calling#quick-start-60-seconds).
+[llm_tool quick start](https://pub.dev/packages/llm_tool#quick-start-60-seconds).
 
 Where you create the model, these imports are all you need (the adapter
 also gives you `ToolDefinition` and `ToolArgumentException`):
 
 ```dart
 import 'package:firebase_ai/firebase_ai.dart';
-import 'package:llm_tool_calling_firebase_ai/llm_tool_calling_firebase_ai.dart';
+import 'package:llm_tool_firebase_ai/llm_tool_firebase_ai.dart';
 
-import 'tools.dart'; // your @Tool functions and the generated allTools
+import 'tools.dart'; // your @LlmTool functions and the generated allTools
 ```
 
 ## Running tools
@@ -61,7 +61,7 @@ For each tool call:
 
 1. **Validation:** invalid arguments are sent back to Gemini as an error it
    can read and fix, and your function doesn't run.
-2. **Confirmation:** tools marked `@Tool(requiresConfirmation: true)` only
+2. **Confirmation:** tools marked `@LlmTool(requiresConfirmation: true)` only
    run when `confirm` approves them (see below).
 3. **Result:** your function runs and its result goes back to Gemini. Results
    that aren't JSON (e.g. a `DateTime`) are sent as their `toString()`.
@@ -71,7 +71,7 @@ a confused model can't loop forever.
 
 ## Tools that need confirmation
 
-Tools marked `@Tool(requiresConfirmation: true)` only run when your
+Tools marked `@LlmTool(requiresConfirmation: true)` only run when your
 `confirm` callback returns `true`. It is called **after** validation, so
 users are never asked about a call that would fail. In a Flutter app, pass a
 callback that has a `BuildContext` and show a dialog:
@@ -139,13 +139,13 @@ declined confirmations and exceptions from your function all become an
 
 ## firebase_ai's automatic function calling
 
-firebase_ai can also run tools by itself, and `toFirebaseAiTool()` gives it
+firebase_ai can also run tools by itself, and `toFirebaseAITool()` gives it
 everything it needs:
 
 ```dart
 final model = FirebaseAI.googleAI().generativeModel(
   model: 'gemini-3.8-flash',
-  tools: [allTools.toFirebaseAiTool(confirm: askUser)],
+  tools: [allTools.toFirebaseAITool(confirm: askUser)],
 );
 final response = await model.startChat().sendMessage(Content.text('Hi'));
 ```
@@ -166,7 +166,7 @@ Developer API, using tools made by the generator: a simple tool, a tool with
 nested classes, lists and an enum (with defaults filled in) after an
 approved confirmation, and the hand-written loop. Declined confirmations and
 the other error paths are covered by the package's unit tests. The check app is
-[in the repository](https://github.com/amitgp853/llm_tool_calling/tree/main/firebase_live_check).
+[in the repository](https://github.com/amitgp853/llm_tool/tree/main/firebase_live_check).
 
 ## Good to know
 
@@ -174,12 +174,13 @@ the other error paths are covered by the package's unit tests. The check app is
   App Check is enforced for Firebase AI Logic in your project, set App Check
   up in your app, or requests fail with *"Firebase App Check token is
   invalid"*.
-- **`Tool` name clash:** firebase_ai has a class called `Tool`, and so does
-  llm_tool_calling (the `@Tool()` annotation). Keep your `@Tool()` functions
-  in their own file (e.g. `tools.dart`), and in the file that creates the
-  model import only firebase_ai and this adapter, as shown above. If a file
-  must import both packages, hide ours:
-  `import 'package:llm_tool_calling/llm_tool_calling.dart' hide Tool;`.
+- **`Tool` name clash:** firebase_ai has a class called `Tool`. Until
+  1.0.0, llm_tool still has `Tool` too, as a deprecated alias of
+  `@LlmTool`. Keep your `@LlmTool()` functions in their own file (e.g.
+  `tools.dart`), and in the file that creates the model import only
+  firebase_ai and this adapter, as shown above: the adapter leaves out the
+  annotations. If a file must import both packages, use
+  `import 'package:llm_tool/llm_tool.dart' hide Tool;`.
 - **Unique names:** all tools passed together must have different names
   (e.g. when combining `allTools` from several files); otherwise the adapter
   throws an `ArgumentError` naming the duplicate, instead of firebase_ai
@@ -187,7 +188,7 @@ the other error paths are covered by the package's unit tests. The check app is
 - Schemas are sent as `parametersJsonSchema`, the field Gemini 2.5+ uses for
   full JSON Schema. `additionalProperties` is left out because firebase_ai
   can't express it; unknown arguments are still rejected by validation.
-- Supported: everything llm_tool_calling generates (strings, numbers,
+- Supported: everything llm_tool generates (strings, numbers,
   booleans, enums, lists and nested classes). For hand-written schemas with
   other keywords, `toFirebaseJsonSchema` throws an `ArgumentError` naming the
   unsupported part.
@@ -197,4 +198,4 @@ the other error paths are covered by the package's unit tests. The check app is
 
 Built and maintained by [Amit Gupta](https://github.com/amitgp853).
 Bug reports, ideas and pull requests are welcome on
-[GitHub](https://github.com/amitgp853/llm_tool_calling/issues).
+[GitHub](https://github.com/amitgp853/llm_tool/issues).

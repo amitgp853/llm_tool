@@ -1,9 +1,9 @@
-// Using llm_tool_calling without the generator: a hand-written
-// ToolDefinition. With llm_tool_calling_generator, you write only the
+// Using llm_tool without the generator: a hand-written
+// ToolDefinition. With llm_tool_generator, you write only the
 // annotated function and this definition is generated for you.
 import 'dart:convert';
 
-import 'package:llm_tool_calling/llm_tool_calling.dart';
+import 'package:llm_tool/llm_tool.dart';
 
 String getWeather(String city, {bool celsius = true}) =>
     'Sunny, ${celsius ? '31°C' : '88°F'} in $city';

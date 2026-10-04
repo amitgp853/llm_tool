@@ -11,7 +11,7 @@ extension ToolDefinitionFormats on ToolDefinition {
   ///
   /// `strict` is `false`: strict mode requires every argument, which tools
   /// with optional parameters can't meet.
-  Map<String, Object?> toOpenAiJson() => {
+  Map<String, Object?> toOpenAIJson() => {
     'type': 'function',
     'function': {
       'name': name,
@@ -26,13 +26,21 @@ extension ToolDefinitionFormats on ToolDefinition {
   /// `strict` is `false` explicitly: when it's left out, the Responses API
   /// may turn the schema strict, which tools with optional parameters can't
   /// meet.
-  Map<String, Object?> toOpenAiResponsesJson() => {
+  Map<String, Object?> toOpenAIResponsesJson() => {
     'type': 'function',
     'name': name,
     'description': description,
     'parameters': parametersSchema,
     'strict': false,
   };
+
+  /// Renamed to [toOpenAIJson].
+  @Deprecated('Use toOpenAIJson(). Will be removed in 1.0.0.')
+  Map<String, Object?> toOpenAiJson() => toOpenAIJson();
+
+  /// Renamed to [toOpenAIResponsesJson].
+  @Deprecated('Use toOpenAIResponsesJson(). Will be removed in 1.0.0.')
+  Map<String, Object?> toOpenAiResponsesJson() => toOpenAIResponsesJson();
 
   /// Anthropic (Claude) Messages API: `{"name", "description",
   /// "input_schema"}`.
@@ -65,13 +73,21 @@ extension ToolDefinitionFormats on ToolDefinition {
 /// The same formats for a list of tools, e.g. the generated `allTools`, and
 /// running a model's call by the tool name it sent.
 extension ToolListFormats on Iterable<ToolDefinition> {
-  /// See [ToolDefinitionFormats.toOpenAiJson].
-  List<Map<String, Object?>> toOpenAiJson() =>
-      _unique([for (final tool in this) tool.toOpenAiJson()]);
+  /// See [ToolDefinitionFormats.toOpenAIJson].
+  List<Map<String, Object?>> toOpenAIJson() =>
+      _unique([for (final tool in this) tool.toOpenAIJson()]);
 
-  /// See [ToolDefinitionFormats.toOpenAiResponsesJson].
-  List<Map<String, Object?>> toOpenAiResponsesJson() =>
-      _unique([for (final tool in this) tool.toOpenAiResponsesJson()]);
+  /// See [ToolDefinitionFormats.toOpenAIResponsesJson].
+  List<Map<String, Object?>> toOpenAIResponsesJson() =>
+      _unique([for (final tool in this) tool.toOpenAIResponsesJson()]);
+
+  /// Renamed to [toOpenAIJson].
+  @Deprecated('Use toOpenAIJson(). Will be removed in 1.0.0.')
+  List<Map<String, Object?>> toOpenAiJson() => toOpenAIJson();
+
+  /// Renamed to [toOpenAIResponsesJson].
+  @Deprecated('Use toOpenAIResponsesJson(). Will be removed in 1.0.0.')
+  List<Map<String, Object?>> toOpenAiResponsesJson() => toOpenAIResponsesJson();
 
   /// See [ToolDefinitionFormats.toAnthropicJson].
   List<Map<String, Object?>> toAnthropicJson() =>

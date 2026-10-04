@@ -1,4 +1,4 @@
-/// Use llm_tool_calling tools with Firebase AI Logic (`firebase_ai`).
+/// Use llm_tool with Firebase AI Logic (`firebase_ai`).
 ///
 /// ```dart
 /// final model = FirebaseAI.googleAI().generativeModel(
@@ -12,9 +12,10 @@
 /// ```
 library;
 
-// So users need only this import and firebase_ai's. The @Tool and @Param
-// annotations are left out: firebase_ai has its own `Tool` class.
-export 'package:llm_tool_calling/llm_tool_calling.dart' hide Param, Tool;
+// So users need only this import and firebase_ai's. The annotations are left
+// out (put @LlmTool functions in their own file); the deprecated `Tool` alias
+// would clash with firebase_ai's `Tool` class.
+export 'package:llm_tool/llm_tool.dart' hide LlmTool, Param, Tool;
 
 export 'src/extensions.dart';
 export 'src/json_schema.dart' show toFirebaseJsonSchema;

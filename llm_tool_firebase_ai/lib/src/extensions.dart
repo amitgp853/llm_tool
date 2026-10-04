@@ -1,13 +1,13 @@
 import 'package:firebase_ai/firebase_ai.dart';
 // firebase_ai has its own Tool class; ours is the annotation, not needed here.
-import 'package:llm_tool_calling/llm_tool_calling.dart' hide Tool;
+import 'package:llm_tool/llm_tool.dart' hide Tool;
 
 import 'json_schema.dart';
 
 /// Converts one tool to firebase_ai declarations.
-extension ToolDefinitionFirebaseAi on ToolDefinition {
+extension ToolDefinitionFirebaseAI on ToolDefinition {
   /// A declaration for manual function calling: the model asks for the call,
-  /// your code runs it, e.g. with [ToolListFirebaseAi.respondTo].
+  /// your code runs it, e.g. with [ToolListFirebaseAI.respondTo].
   FunctionDeclaration toFunctionDeclaration() {
     final (:properties, :optional) = objectFields(parametersSchema);
     return FunctionDeclaration(
@@ -38,9 +38,9 @@ extension ToolDefinitionFirebaseAi on ToolDefinition {
 }
 
 /// Converts a list of tools, e.g. the generated `allTools`.
-extension ToolListFirebaseAi on Iterable<ToolDefinition> {
+extension ToolListFirebaseAI on Iterable<ToolDefinition> {
   /// A firebase_ai [Tool] whose functions run automatically in a
-  /// `ChatSession`. See [ToolDefinitionFirebaseAi.toAutoFunctionDeclaration].
+  /// `ChatSession`. See [ToolDefinitionFirebaseAI.toAutoFunctionDeclaration].
   ///
   /// Note: firebase_ai 4.0.0 sends the results with the role `function`,
   /// which newer Gemini models (e.g. gemini-3.8-flash) reject. It's fixed in
@@ -50,17 +50,22 @@ extension ToolListFirebaseAi on Iterable<ToolDefinition> {
   /// ```dart
   /// final model = FirebaseAI.googleAI().generativeModel(
   ///   model: 'gemini-3.8-flash',
-  ///   tools: [allTools.toFirebaseAiTool(confirm: askUser)],
+  ///   tools: [allTools.toFirebaseAITool(confirm: askUser)],
   /// );
   /// ```
   ///
   /// Throws an [ArgumentError] if two tools have the same name.
-  Tool toFirebaseAiTool({ToolConfirmation? confirm}) {
+  Tool toFirebaseAITool({ToolConfirmation? confirm}) {
     _checkUniqueNames();
     return Tool.functionDeclarations([
       for (final tool in this) tool.toAutoFunctionDeclaration(confirm: confirm),
     ]);
   }
+
+  /// Renamed to [toFirebaseAITool].
+  @Deprecated('Use toFirebaseAITool(). Will be removed in 1.0.0.')
+  Tool toFirebaseAiTool({ToolConfirmation? confirm}) =>
+      toFirebaseAITool(confirm: confirm);
 
   /// Declarations for manual function calling, e.g.
   /// `Tool.functionDeclarations(allTools.toFunctionDeclarations())`.
@@ -115,7 +120,7 @@ extension ToolListFirebaseAi on Iterable<ToolDefinition> {
 /// ```
 extension ChatSessionToolCalling on ChatSession {
   /// Sends [message], runs every tool Gemini asks for with
-  /// [ToolListFirebaseAi.respondTo], sends the results back, and repeats
+  /// [ToolListFirebaseAI.respondTo], sends the results back, and repeats
   /// until Gemini answers without calling a tool.
   ///
   /// Throws a [StateError] if Gemini is still calling tools after

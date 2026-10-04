@@ -1,10 +1,10 @@
-name: llm_tool_calling_workspace
+name: llm_tool_workspace
 publish_to: none
 
 environment:
   sdk: ^3.11.0
 
 workspace:
-  - llm_tool_calling
-  - llm_tool_calling_generator
+  - llm_tool
+  - llm_tool_generator
   - tool_calling_playground

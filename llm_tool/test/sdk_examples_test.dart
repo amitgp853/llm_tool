@@ -2,7 +2,7 @@
 // and runs against the real SDKs (no network: the model's tool calls are
 // built by hand). If you change one here, change the README too.
 import 'package:anthropic_sdk_dart/anthropic_sdk_dart.dart' as anthropic;
-import 'package:llm_tool_calling/llm_tool_calling.dart';
+import 'package:llm_tool/llm_tool.dart';
 import 'package:mcp_dart/mcp_dart.dart' as mcp;
 import 'package:openai_dart/openai_dart.dart' as openai;
 import 'package:test/test.dart';
@@ -30,7 +30,7 @@ final allTools = [
 /// Asks OpenAI a question, running every tool it calls, until it answers.
 Future<String?> askOpenAi(String question) async {
   final client = openai.OpenAIClient.fromEnvironment(); // OPENAI_API_KEY
-  final tools = allTools.toOpenAiJson().map(openai.Tool.fromJson).toList();
+  final tools = allTools.toOpenAIJson().map(openai.Tool.fromJson).toList();
   final messages = <openai.ChatMessage>[openai.ChatMessage.user(question)];
   try {
     while (true) {
@@ -109,7 +109,7 @@ Future<String> askClaude(String question) async {
 void main() {
   test('OpenAI (openai_dart)', () async {
     // Tools for the request:
-    final tools = allTools.toOpenAiJson().map(openai.Tool.fromJson).toList();
+    final tools = allTools.toOpenAIJson().map(openai.Tool.fromJson).toList();
     expect(tools.single.function.name, 'getWeather');
 
     // A tool call from the model (arguments arrive as a JSON string):

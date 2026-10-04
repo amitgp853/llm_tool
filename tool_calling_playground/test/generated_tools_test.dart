@@ -2,7 +2,7 @@
 // After changing lib/tools.dart, run `dart run build_runner build` first.
 import 'dart:convert';
 
-import 'package:llm_tool_calling/llm_tool_calling.dart';
+import 'package:llm_tool/llm_tool.dart';
 import 'package:test/test.dart';
 import 'package:tool_calling_playground/tools.dart';
 

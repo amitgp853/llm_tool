@@ -1,13 +1,16 @@
 import 'dart:async';
+import 'annotations.dart';
 import 'schema_validator.dart';
 import 'tool_argument_exception.dart';
 import 'tool_result.dart';
 
 /// A tool an LLM can call: its name, description, JSON schema and code.
 ///
-/// Usually generated from a [Tool]-annotated function, but you can also
-/// write one by hand.
-class ToolDefinition {
+/// [T] is what the tool returns, e.g. `ToolDefinition<String>` for a
+/// function returning `String` (or `Future<String>`), so [call] needs no
+/// cast. Usually generated from an [LlmTool]-annotated function, but you can
+/// also write one by hand; [T] is then inferred from [execute].
+class ToolDefinition<T> {
   /// The name the LLM uses to call this tool.
   final String name;
 
@@ -25,7 +28,7 @@ class ToolDefinition {
   /// Runs the tool with already-decoded JSON arguments, without validation.
   ///
   /// Prefer [call], which validates first.
-  final FutureOr<Object?> Function(Map<String, Object?> args) execute;
+  final FutureOr<T> Function(Map<String, Object?> args) execute;
 
   /// Creates a tool definition. See the class docs.
   const ToolDefinition({
@@ -41,7 +44,7 @@ class ToolDefinition {
   /// Throws a [ToolArgumentException] listing every problem if [args] don't
   /// match [parametersSchema]. Send its message back to the LLM so it can
   /// fix the call.
-  Future<Object?> call(Map<String, Object?> args) async {
+  Future<T> call(Map<String, Object?> args) async {
     final errors = validateArguments(parametersSchema, args);
     if (errors.isNotEmpty) throw ToolArgumentException(name, errors);
     return await execute(args);
