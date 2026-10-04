@@ -15,7 +15,8 @@ environment:
 
 dependencies:
   firebase_ai: ^4.0.0
-  llm_tool_calling: ^0.3.0
+  # Works with 0.3.x and 0.4.x (caret ranges below 1.0 stop at the next minor).
+  llm_tool_calling: '>=0.3.0 <0.5.0'
 
 dev_dependencies:
   firebase_core: ^4.15.0

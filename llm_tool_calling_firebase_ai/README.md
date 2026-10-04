@@ -164,7 +164,8 @@ final response = await model.startChat().sendMessage(Content.text('Hi'));
 Checked live in October 2026 with `gemini-3.8-flash` on the Gemini
 Developer API, using tools made by the generator: a simple tool, a tool with
 nested classes, lists and an enum (with defaults filled in) after an
-approved confirmation, and the hand-written loop. The check app is
+approved confirmation, and the hand-written loop. Declined confirmations and
+the other error paths are covered by the package's unit tests. The check app is
 [in the repository](https://github.com/amitgp853/llm_tool_calling/tree/main/firebase_live_check).
 
 ## Good to know

@@ -1,4 +1,4 @@
-## Unreleased
+## 0.4.0
 
 - The generated code uses your import prefix for `ToolDefinition`, so
   `import 'package:llm_tool_calling/llm_tool_calling.dart' as ltc;` works,

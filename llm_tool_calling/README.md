@@ -156,7 +156,7 @@ validation and confirmation handling:
 
 | You use | Add | Then |
 |---|---|---|
-| Firebase AI Logic ([`firebase_ai`](https://pub.dev/packages/firebase_ai)) | [`llm_tool_calling_firebase_ai`](https://pub.dev/packages/llm_tool_calling_firebase_ai) | `tools: [allTools.toFirebaseAiTool()]` |
+| Firebase AI Logic ([`firebase_ai`](https://pub.dev/packages/firebase_ai)) | [`llm_tool_calling_firebase_ai`](https://pub.dev/packages/llm_tool_calling_firebase_ai) | `chat.sendMessageWithTools(message, allTools)` |
 | [`llm_sdk`](https://pub.dev/packages/llm_sdk), [`flutter_ai_tools`](https://pub.dev/packages/flutter_ai_tools) | Coming soon | See [Sending tools to your LLM](#sending-tools-to-your-llm) meanwhile |
 
 ## Compatibility
