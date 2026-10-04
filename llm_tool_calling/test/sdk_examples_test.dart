@@ -24,6 +24,88 @@ final allTools = [
   ),
 ];
 
+// Complete loops, as in the README. Compiled and analyzed, not run: they
+// need API keys and the network.
+
+/// Asks OpenAI a question, running every tool it calls, until it answers.
+Future<String?> askOpenAi(String question) async {
+  final client = openai.OpenAIClient.fromEnvironment(); // OPENAI_API_KEY
+  final tools = allTools.toOpenAiJson().map(openai.Tool.fromJson).toList();
+  final messages = <openai.ChatMessage>[openai.ChatMessage.user(question)];
+  try {
+    while (true) {
+      final response = await client.chat.completions.create(
+        openai.ChatCompletionCreateRequest(
+          model: 'gpt-5.5',
+          messages: messages,
+          tools: tools,
+        ),
+      );
+      if (!response.hasToolCalls) return response.text;
+
+      messages.add(
+        openai.ChatMessage.assistant(toolCalls: response.allToolCalls),
+      );
+      for (final call in response.allToolCalls) {
+        final result = await allTools.invoke(
+          call.function.name,
+          call.function.arguments, // a JSON string; invoke decodes it
+        );
+        messages.add(
+          openai.ChatMessage.tool(
+            toolCallId: call.id,
+            content: result.toText(),
+          ),
+        );
+      }
+    }
+  } finally {
+    client.close();
+  }
+}
+
+/// Asks Claude a question, running every tool it calls, until it answers.
+Future<String> askClaude(String question) async {
+  final client =
+      anthropic.AnthropicClient.fromEnvironment(); // ANTHROPIC_API_KEY
+  final tools = [
+    for (final json in allTools.toAnthropicJson())
+      anthropic.ToolDefinition.custom(anthropic.Tool.fromJson(json)),
+  ];
+  final messages = <anthropic.InputMessage>[
+    anthropic.InputMessage.user(question),
+  ];
+  try {
+    while (true) {
+      final response = await client.messages.create(
+        anthropic.MessageCreateRequest(
+          model: 'claude-opus-5-5',
+          maxTokens: 16000,
+          tools: tools,
+          messages: messages,
+        ),
+      );
+      if (!response.hasToolUse) return response.text;
+
+      messages.add(response.toInputMessage());
+      final results = <anthropic.InputContentBlock>[];
+      for (final toolUse in response.toolUseBlocks) {
+        final result = await allTools.invoke(toolUse.name, toolUse.input);
+        results.add(
+          anthropic.InputContentBlock.toolResultText(
+            toolUseId: toolUse.id,
+            text: result.toText(),
+            isError: result.isError, // lets Claude see the call failed
+          ),
+        );
+      }
+      messages.add(anthropic.InputMessage.userBlocks(results));
+    }
+  } finally {
+    client.close();
+  }
+}
+
 void main() {
   test('OpenAI (openai_dart)', () async {
     // Tools for the request:
