@@ -5,6 +5,10 @@
   tools bound to that instance, typed by their common return type.
 - `@LlmTool` on a method of a class without `@LlmToolset` is still a build
   error, now suggesting `@LlmToolset`.
+- Writes `@Param` limits into the schema (`min` → `minimum`, `minLength`,
+  `pattern`, `minItems`, ...). On a list, value limits apply to its items.
+  A limit that doesn't fit the type, `min` above `max`, a negative length
+  or an invalid pattern is a build error.
 - Requires `llm_tool` 0.8.0.
 
 ## 0.7.0

@@ -321,7 +321,11 @@ class _TypeMapper {
       }
       final description = _paramDescription(param) ?? _fieldDescription(param);
       properties[name] = {
-        ...schemaFor(param.type, paramPath, param),
+        ..._withLimits(
+          schemaFor(param.type, paramPath, param),
+          param,
+          paramPath,
+        ),
         'description': ?description,
       };
 
@@ -350,6 +354,109 @@ class _TypeMapper {
       required: required,
       arguments: [...positional, ...named].join(', '),
     );
+  }
+
+  /// [schema] with the limits from [param]'s `@Param(min: ..., ...)`.
+  ///
+  /// Value limits (min, max, minLength, maxLength, pattern) on a list apply
+  /// to its items. Limits that can't apply to the type are build errors.
+  Map<String, Object?> _withLimits(
+    Map<String, Object?> schema,
+    FormalParameterElement param,
+    String path,
+  ) {
+    final annotation = _paramChecker.firstAnnotationOf(param);
+    if (annotation == null) return schema;
+    final reader = ConstantReader(annotation);
+    Object? read(String field) => reader.peek(field)?.literalValue;
+    final min = read('min') as num?;
+    final max = read('max') as num?;
+    final minLength = read('minLength') as int?;
+    final maxLength = read('maxLength') as int?;
+    final pattern = read('pattern') as String?;
+    final minItems = read('minItems') as int?;
+    final maxItems = read('maxItems') as int?;
+
+    Never fail(String problem) => throw InvalidGenerationSource(
+      '${path.contains('.') ? 'Field' : 'Parameter'} "$path": $problem',
+      element: param,
+    );
+    void checkRange(String low, num? lowValue, String high, num? highValue) {
+      if (lowValue != null && highValue != null && lowValue > highValue) {
+        fail('$low ($lowValue) is greater than $high ($highValue).');
+      }
+    }
+
+    void checkCount(String name, int? value) {
+      if (value != null && value < 0) fail("$name can't be negative.");
+    }
+
+    final isList = schema['type'] == 'array';
+    // Value limits go on the list's items for a list.
+    var target = isList ? (schema['items']! as Map<String, Object?>) : schema;
+    final type = target['type'];
+    String isNot(String noun) =>
+        isList ? 'its items are not ${noun}s' : 'it is not a $noun';
+
+    if (min != null || max != null) {
+      if (type != 'integer' && type != 'number' || target.containsKey('enum')) {
+        fail(
+          'min and max only apply to numbers and lists of numbers, but '
+          '${isNot('number')}.',
+        );
+      }
+      for (final (name, value) in [('min', min), ('max', max)]) {
+        if (type == 'integer' && value is double && value != value.truncate()) {
+          fail('$name must be a whole number for an int, got $value.');
+        }
+      }
+      checkRange('min', min, 'max', max);
+    }
+    if (minLength != null || maxLength != null || pattern != null) {
+      if (type != 'string' || target.containsKey('enum')) {
+        fail(
+          'minLength, maxLength and pattern only apply to Strings and lists '
+          'of Strings, but ${isNot('String')}.',
+        );
+      }
+      checkCount('minLength', minLength);
+      checkCount('maxLength', maxLength);
+      checkRange('minLength', minLength, 'maxLength', maxLength);
+      if (pattern != null) {
+        try {
+          // How JSON Schema reads patterns: ECMAScript with the u flag.
+          RegExp(pattern, unicode: true);
+        } on FormatException catch (error) {
+          fail(
+            'pattern "$pattern" is not a valid regular expression: '
+            '${error.message}.',
+          );
+        }
+      }
+    }
+    if (minItems != null || maxItems != null) {
+      if (!isList) fail('minItems and maxItems only apply to Lists.');
+      checkCount('minItems', minItems);
+      checkCount('maxItems', maxItems);
+      checkRange('minItems', minItems, 'maxItems', maxItems);
+    }
+
+    target = {
+      ...target,
+      'minimum': ?min,
+      'maximum': ?max,
+      'minLength': ?minLength,
+      'maxLength': ?maxLength,
+      'pattern': ?pattern,
+    };
+    return isList
+        ? {
+            ...schema,
+            'items': target,
+            'minItems': ?minItems,
+            'maxItems': ?maxItems,
+          }
+        : target;
   }
 
   /// The JSON Schema for [type], without a description.

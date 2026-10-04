@@ -7,9 +7,14 @@ import 'package:llm_tool/llm_tool.dart' hide Tool;
 ///
 /// Supports what llm_tool generates: the types string, integer,
 /// number, boolean, array and object, with `description`, `enum` (strings),
-/// `items`, `properties` and `required`. `additionalProperties` is dropped
-/// because firebase_ai can't express it; [ToolDefinition.call] still rejects
-/// unknown arguments.
+/// `items`, `properties`, `required` and the limits `minimum`, `maximum`,
+/// `minItems` and `maxItems`.
+///
+/// firebase_ai can't express `minLength`, `maxLength` or `pattern`, so they
+/// are added to the description for the model to read, e.g.
+/// "Airport code (exactly 3 characters, matching ^[A-Z]{3}$)".
+/// `additionalProperties` is dropped. [ToolDefinition.call] still checks all
+/// of them.
 ///
 /// Throws an [ArgumentError] for anything else, e.g. in a hand-written schema.
 JSONSchema toFirebaseJsonSchema(Map<String, Object?> schema) {
@@ -22,11 +27,19 @@ JSONSchema toFirebaseJsonSchema(Map<String, Object?> schema) {
           description: description,
         );
       }
-      return JSONSchema.string(description: description);
+      return JSONSchema.string(description: _withTextLimits(schema));
     case 'integer':
-      return JSONSchema.integer(description: description);
+      return JSONSchema.integer(
+        description: description,
+        minimum: (schema['minimum'] as num?)?.toInt(),
+        maximum: (schema['maximum'] as num?)?.toInt(),
+      );
     case 'number':
-      return JSONSchema.number(description: description);
+      return JSONSchema.number(
+        description: description,
+        minimum: (schema['minimum'] as num?)?.toDouble(),
+        maximum: (schema['maximum'] as num?)?.toDouble(),
+      );
     case 'boolean':
       return JSONSchema.boolean(description: description);
     case 'array':
@@ -37,6 +50,8 @@ JSONSchema toFirebaseJsonSchema(Map<String, Object?> schema) {
       return JSONSchema.array(
         items: toFirebaseJsonSchema(items.cast()),
         description: description,
+        minItems: schema['minItems'] as int?,
+        maxItems: schema['maxItems'] as int?,
       );
     case 'object':
       final (:properties, :optional) = objectFields(schema);
@@ -52,6 +67,28 @@ JSONSchema toFirebaseJsonSchema(Map<String, Object?> schema) {
         'JSON Schema type not supported by the firebase_ai adapter',
       );
   }
+}
+
+/// A string schema's description, with the limits firebase_ai can't send
+/// (minLength, maxLength, pattern) written out for the model.
+String? _withTextLimits(Map<String, Object?> schema) {
+  final description = schema['description'] as String?;
+  final min = schema['minLength'] as int?;
+  final max = schema['maxLength'] as int?;
+  final pattern = schema['pattern'] as String?;
+  String characters(int n) => n == 1 ? '1 character' : '$n characters';
+  final limits = [
+    switch ((min, max)) {
+      (final min?, final max?) when min == max => 'exactly ${characters(min)}',
+      (final min?, final max?) => '$min to ${characters(max)}',
+      (final min?, null) => 'at least ${characters(min)}',
+      (null, final max?) => 'at most ${characters(max)}',
+      (null, null) => null,
+    },
+    if (pattern != null) 'matching $pattern',
+  ].nonNulls.join(', ');
+  if (limits.isEmpty) return description;
+  return description == null ? limits : '$description ($limits)';
 }
 
 /// The converted `properties` of an object [schema], and the names of the

@@ -947,6 +947,144 @@ Future<Stats> statsTyped() => statsTool({});
     });
   });
 
+  group('limits', () {
+    test('numbers, strings and lists get their JSON Schema limits', () async {
+      final output = await _generate(r'''
+/// Doc.
+@LlmTool()
+void f(
+  @Param('Age', min: 0, max: 130) int age,
+  @Param('Ratio', min: 0.5) double ratio,
+  @Param('Square', minLength: 2, maxLength: 2, pattern: r'^[a-h][1-8]$')
+  String square,
+  @Param('Tags', minItems: 1, maxItems: 5) List<String> tags,
+) {}
+''');
+      final compact = _withoutSpaces(output);
+      expect(
+        compact,
+        contains('"age":{"type":"integer","minimum":0,"maximum":130,'),
+      );
+      expect(compact, contains('"ratio":{"type":"number","minimum":0.5,'));
+      expect(
+        compact,
+        contains(
+          r'"square":{"type":"string","minLength":2,"maxLength":2,'
+          r'"pattern":"^[a-h][1-8]\$",',
+        ),
+      );
+      expect(
+        compact,
+        contains(
+          '"tags":{"type":"array","items":{"type":"string"},'
+          '"minItems":1,"maxItems":5,',
+        ),
+      );
+    });
+
+    test('value limits on a list apply to its items', () async {
+      final output = await _generate('''
+/// Doc.
+@LlmTool()
+void f(
+  @Param('Scores', min: 0, max: 100, maxItems: 3) List<int> scores,
+  @Param('Names', maxLength: 20) List<String> names,
+) {}
+''');
+      final compact = _withoutSpaces(output);
+      expect(
+        compact,
+        contains(
+          '"scores":{"type":"array","items":{"type":"integer","minimum":0,'
+          '"maximum":100},"maxItems":3,',
+        ),
+      );
+      expect(compact, contains('"items":{"type":"string","maxLength":20}'));
+    });
+
+    test('works on class fields and nullable parameters', () async {
+      final output = await _generate('''
+/// A person.
+class Person {
+  Person({@Param('Age', min: 0) required this.age});
+  final int age;
+}
+
+/// Doc.
+@LlmTool()
+void f(Person person, {@Param('Limit', max: 50) int? limit}) {}
+''');
+      final compact = _withoutSpaces(output);
+      expect(compact, contains('"age":{"type":"integer","minimum":0,'));
+      expect(compact, contains('"limit":{"type":"integer","maximum":50,'));
+    });
+
+    for (final (problem, param, error) in [
+      (
+        'min on a String',
+        "@Param('X', min: 1) String x",
+        'min and max only apply to numbers and lists of numbers, but it is '
+            'not a number.',
+      ),
+      (
+        'min on a list of Strings',
+        "@Param('X', min: 1) List<String> x",
+        'but its items are not numbers.',
+      ),
+      (
+        'maxLength on an int',
+        "@Param('X', maxLength: 3) int x",
+        'minLength, maxLength and pattern only apply to Strings and lists of '
+            'Strings, but it is not a String.',
+      ),
+      (
+        'pattern on an enum',
+        "@Param('X', pattern: 'a') Side x",
+        'but it is not a String.',
+      ),
+      (
+        'minItems on a String',
+        "@Param('X', minItems: 1) String x",
+        'minItems and maxItems only apply to Lists.',
+      ),
+      (
+        'min greater than max',
+        "@Param('X', min: 5, max: 1) int x",
+        'min (5) is greater than max (1).',
+      ),
+      (
+        'a fractional min on an int',
+        "@Param('X', min: 0.5) int x",
+        'min must be a whole number for an int, got 0.5.',
+      ),
+      (
+        'a negative maxLength',
+        "@Param('X', maxLength: -1) String x",
+        "maxLength can't be negative.",
+      ),
+      (
+        'minItems greater than maxItems',
+        "@Param('X', minItems: 3, maxItems: 2) List<int> x",
+        'minItems (3) is greater than maxItems (2).',
+      ),
+      (
+        'an invalid pattern',
+        "@Param('X', pattern: '(') String x",
+        'pattern "(" is not a valid regular expression',
+      ),
+    ]) {
+      test('$problem is a build error', () async {
+        expect(
+          await _buildErrors(
+            'enum Side { white, black }\n\n'
+            '/// Doc.\n@LlmTool()\nvoid f($param) {}\n',
+          ),
+          allOf(contains('Parameter "x": '), contains(error)),
+        );
+      });
+    }
+  });
+
   group('toolsets', () {
     test('instance and static methods become an llmTools getter', () async {
       final output = await _generate('''

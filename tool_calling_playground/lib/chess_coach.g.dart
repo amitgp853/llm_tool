@@ -19,6 +19,7 @@ extension ChessCoachLlmTools on ChessCoach {
         "properties": {
           "move": {
             "type": "string",
+            "pattern": "^[a-h][1-8][a-h][1-8][qrbn]?\$",
             "description": "The move in UCI, e.g. e2e4",
           },
         },

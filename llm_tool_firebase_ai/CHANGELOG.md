@@ -1,3 +1,15 @@
+## 0.4.0
+
+- Sends `@Param` limits from `llm_tool` 0.8.0: `minimum`, `maximum`,
+  `minItems` and `maxItems` as firebase_ai schema fields. firebase_ai has
+  no fields for `minLength`, `maxLength` and `pattern`, so they are added
+  to the parameter's description, e.g. "Airport code (exactly 3
+  characters, matching ^[A-Z]{3}$)". `call()` and `invoke()` check them
+  all.
+- The re-export of `llm_tool` also leaves out the new `LlmToolset`
+  annotation.
+- Requires `llm_tool` 0.8.0.
+
 ## 0.3.0
 
 - **Renamed from `llm_tool_calling_firebase_ai`** (now discontinued), to go

@@ -12,7 +12,13 @@ class ChessCoach {
 
   /// Plays a move in the current game.
   @LlmTool(name: 'play_move')
-  String playMove(@Param('The move in UCI, e.g. e2e4') String move) {
+  String playMove(
+    @Param(
+      'The move in UCI, e.g. e2e4',
+      pattern: r'^[a-h][1-8][a-h][1-8][qrbn]?$',
+    )
+    String move,
+  ) {
     moves.add(move);
     return '$player played $move (move ${moves.length})';
   }

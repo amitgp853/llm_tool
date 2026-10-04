@@ -89,6 +89,9 @@ The list is named after the file: `tools.dart` gives `allTools`,
 - Descriptions from `@LlmTool(description: ...)` or the doc comment.
 - Custom JSON names with `@Param('...', name: 'game_id')`, so your Dart
   code keeps camelCase while the LLM sees snake case.
+- Limits with `@Param('...', min: 0, max: 130)`, `minLength`, `maxLength`,
+  `pattern`, `minItems` and `maxItems`. See
+  [Limits](https://pub.dev/packages/llm_tool#limits).
 
 - Class parameters become nested object schemas, built through the class's
   unnamed constructor. freezed classes work too. See

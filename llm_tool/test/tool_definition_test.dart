@@ -319,6 +319,87 @@ void main() {
       };
       expect(validateArguments(badSchema, {'city': 'Kanpur'}), isEmpty);
     });
+
+    group('limits', () {
+      Map<String, Object?> one(Map<String, Object?> property) => {
+        'type': 'object',
+        'properties': {'x': property},
+      };
+      List<String> check(Map<String, Object?> property, Object? x) =>
+          validateArguments(one(property), {'x': x});
+
+      test('minimum and maximum are inclusive', () {
+        final age = {'type': 'integer', 'minimum': 0, 'maximum': 130};
+        expect(check(age, 0), isEmpty);
+        expect(check(age, 130), isEmpty);
+        expect(check(age, -1), ['x must be at least 0, got -1']);
+        expect(check(age, 131), ['x must be at most 130, got 131']);
+        // A whole number sent as 131.0 reads as 131.
+        expect(check(age, 131.0), ['x must be at most 130, got 131']);
+      });
+
+      test('decimal limits', () {
+        final ratio = {'type': 'number', 'minimum': 0.5, 'maximum': 1.5};
+        expect(check(ratio, 0.75), isEmpty);
+        expect(check(ratio, 0.25), ['x must be at least 0.5, got 0.25']);
+      });
+
+      test('string length counts characters', () {
+        final name = {'type': 'string', 'minLength': 2, 'maxLength': 3};
+        expect(check(name, 'ab'), isEmpty);
+        // One emoji is two UTF-16 units but one character.
+        expect(check(name, '😀😀'), isEmpty);
+        expect(check(name, 'a'), ['x must be at least 2 characters, got 1']);
+        expect(check(name, 'abcd'), ['x must be at most 3 characters, got 4']);
+        expect(check({'type': 'string', 'maxLength': 1}, 'ab'), [
+          'x must be at most 1 character, got 2',
+        ]);
+      });
+
+      test('pattern finds a match anywhere unless anchored', () {
+        expect(check({'type': 'string', 'pattern': '[0-9]'}, 'a1b'), isEmpty);
+        final square = {'type': 'string', 'pattern': r'^[a-h][1-8]$'};
+        expect(check(square, 'e4'), isEmpty);
+        expect(check(square, 'e44'), [
+          r'x must match the pattern ^[a-h][1-8]$, got "e44"',
+        ]);
+      });
+
+      test('an invalid pattern is ignored, not a crash', () {
+        expect(check({'type': 'string', 'pattern': '('}, 'a'), isEmpty);
+      });
+
+      test('minItems and maxItems', () {
+        final tags = {
+          'type': 'array',
+          'items': {'type': 'string'},
+          'minItems': 1,
+          'maxItems': 2,
+        };
+        expect(check(tags, ['a']), isEmpty);
+        expect(check(tags, []), ['x must have at least 1 item, got 0']);
+        expect(check(tags, ['a', 'b', 'c']), [
+          'x must have at most 2 items, got 3',
+        ]);
+      });
+
+      test('item limits name the item', () {
+        final scores = {
+          'type': 'array',
+          'items': {'type': 'integer', 'minimum': 0, 'maximum': 100},
+        };
+        expect(check(scores, [50, 101, -1]), [
+          'x[1] must be at most 100, got 101',
+          'x[2] must be at least 0, got -1',
+        ]);
+      });
+
+      test('limits are not checked after a type error', () {
+        expect(check({'type': 'integer', 'minimum': 5}, 'one'), [
+          'x must be an integer, got string',
+        ]);
+      });
+    });
   });
 
   group('withoutAdditionalProperties', () {

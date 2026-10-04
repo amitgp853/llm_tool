@@ -1,6 +1,6 @@
 name: llm_tool_firebase_ai
 description: Use llm_tool with Firebase AI Logic (firebase_ai). Turns your @LlmTool functions into Gemini function declarations and runs the whole tool loop.
-version: 0.3.0
+version: 0.4.0
 repository: https://github.com/amitgp853/llm_tool/tree/main/llm_tool_firebase_ai
 issue_tracker: https://github.com/amitgp853/llm_tool/issues
 topics:
@@ -15,7 +15,7 @@ environment:
 
 dependencies:
   firebase_ai: ^4.0.0
-  llm_tool: ^0.7.0
+  llm_tool: ^0.8.0
 
 dev_dependencies:
   firebase_core: ^4.15.0

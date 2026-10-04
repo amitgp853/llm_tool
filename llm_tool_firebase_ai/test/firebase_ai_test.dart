@@ -99,6 +99,55 @@ void main() {
       expect(json.toString(), isNot(contains('additionalProperties')));
     });
 
+    test('limits: numbers and lists as fields, text in the description', () {
+      final json = toFirebaseJsonSchema({
+        'type': 'object',
+        'properties': {
+          'from': {
+            'type': 'string',
+            'minLength': 3,
+            'maxLength': 3,
+            'pattern': r'^[A-Z]{3}$',
+            'description': 'Airport code',
+          },
+          'age': {'type': 'integer', 'minimum': 0, 'maximum': 130},
+          'ratio': {'type': 'number', 'minimum': 0.5},
+          'tags': {
+            'type': 'array',
+            'items': {'type': 'string', 'maxLength': 10},
+            'minItems': 1,
+            'maxItems': 5,
+          },
+        },
+        'required': ['from', 'age', 'ratio', 'tags'],
+      }).toJson();
+      expect(json['properties'], {
+        'from': {
+          'type': 'string',
+          'description':
+              r'Airport code (exactly 3 characters, matching ^[A-Z]{3}$)',
+        },
+        'age': {'type': 'integer', 'minimum': 0.0, 'maximum': 130.0},
+        'ratio': {'type': 'number', 'minimum': 0.5},
+        'tags': {
+          'type': 'array',
+          'items': {'type': 'string', 'description': 'at most 10 characters'},
+          'minItems': 1,
+          'maxItems': 5,
+        },
+      });
+    });
+
+    test('text limits are worded for the model', () {
+      String? described(Map<String, Object?> limits) =>
+          toFirebaseJsonSchema({'type': 'string', ...limits}).description;
+      expect(described({'minLength': 2}), 'at least 2 characters');
+      expect(described({'maxLength': 1}), 'at most 1 character');
+      expect(described({'minLength': 2, 'maxLength': 5}), '2 to 5 characters');
+      expect(described({'pattern': '[0-9]'}), 'matching [0-9]');
+      expect(described({}), isNull);
+    });
+
     test('unsupported hand-written schemas fail clearly', () {
       expect(
         () => toFirebaseJsonSchema({'type': 'null'}),

@@ -188,6 +188,9 @@ the other error paths are covered by the package's unit tests. The check app is
 - Schemas are sent as `parametersJsonSchema`, the field Gemini 2.5+ uses for
   full JSON Schema. `additionalProperties` is left out because firebase_ai
   can't express it; unknown arguments are still rejected by validation.
+  The same goes for the `@Param` limits `minLength`, `maxLength` and
+  `pattern`: they are written into the parameter's description instead, so
+  Gemini still reads them.
 - Supported: everything llm_tool generates (strings, numbers,
   booleans, enums, lists and nested classes). For hand-written schemas with
   other keywords, `toFirebaseJsonSchema` throws an `ArgumentError` naming the

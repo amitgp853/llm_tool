@@ -6,22 +6,31 @@ import 'package:mcp_dart/mcp_dart.dart' as mcp;
 import 'package:openai_dart/openai_dart.dart' as openai;
 import 'package:test/test.dart';
 
-/// Like a generated schema: nested object, list, enum, optional field.
+/// Like a generated schema: nested object, list, enum, optional field and
+/// @Param limits.
 const _schema = <String, Object?>{
   'type': 'object',
   'properties': {
-    'from': {'type': 'string', 'description': 'Airport code'},
+    'from': {
+      'type': 'string',
+      'minLength': 3,
+      'maxLength': 3,
+      'pattern': r'^[A-Z]{3}$',
+      'description': 'Airport code',
+    },
     'passengers': {
       'type': 'array',
       'items': {
         'type': 'object',
         'properties': {
           'name': {'type': 'string'},
-          'age': {'type': 'integer'},
+          'age': {'type': 'integer', 'minimum': 0, 'maximum': 130},
         },
         'required': ['name', 'age'],
         'additionalProperties': false,
       },
+      'minItems': 1,
+      'maxItems': 9,
     },
     'cabin': {
       'type': 'string',

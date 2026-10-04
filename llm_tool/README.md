@@ -379,6 +379,7 @@ have a key for, and checks that the model's arguments pass validation.
 | `@LlmTool(requiresConfirmation: true)` | Sets `ToolDefinition.requiresConfirmation`, so your app can ask the user before running it (e.g. for deleting or paying). |
 | `@Param('...')` | Description of one parameter. Optional, but it helps the LLM a lot. |
 | `@Param('...', name: 'game_id')` | The name the LLM sees and sends, e.g. snake case, while your Dart parameter stays `gameId`. Works on class fields too. |
+| `@Param('...', min: 0, max: 130)` | Limits, checked before your function runs. See [Limits](#limits). |
 
 The generated variable is always `<functionName>Tool`, e.g. `getWeatherTool`,
 even when you set a custom `name`.
@@ -508,6 +509,33 @@ String bookFlight(List<Passenger> passengers, String from, String to) => '...';
   itself (e.g. a linked-list `Node`); that's a build-time error.
 - Classes from a prefixed import (`import 'models.dart' as models;`) work.
 
+### Limits
+
+`@Param` can limit what the LLM may send. The limits go into the schema, so
+the model sees them, and are checked before your function runs:
+
+```dart
+/// Plays a move in a game.
+@LlmTool()
+String playMove(
+  @Param('The game', name: 'game_id', min: 1) int gameId,
+  @Param('The move in UCI, e.g. e2e4', pattern: r'^[a-h][1-8][a-h][1-8][qrbn]?$')
+  String move,
+  @Param('Short notes', maxItems: 3, maxLength: 80) List<String> notes,
+) => '...';
+```
+
+| Limit | For | JSON Schema |
+|---|---|---|
+| `min`, `max` | `int`, `double`, `num` (inclusive) | `minimum`, `maximum` |
+| `minLength`, `maxLength` | `String`, in characters | `minLength`, `maxLength` |
+| `pattern` | `String`: must contain a match; use `^...$` for the whole text | `pattern` |
+| `minItems`, `maxItems` | `List` | `minItems`, `maxItems` |
+
+On a list, `min`, `max`, `minLength`, `maxLength` and `pattern` apply to
+each item. A limit that doesn't fit the type, `min` above `max`, or a
+pattern that isn't a valid regular expression is a build error.
+
 ## Validation and errors
 
 `invoke` (and `tool(args)`, that is `ToolDefinition.call`) validates the
@@ -522,6 +550,7 @@ once:
 | Value not in an enum | `unit must be one of "celsius", "fahrenheit", got "kelvin"` |
 | Wrong list item (every one is checked) | `tags[2] must be a string, got integer` |
 | Problem inside an object | `booking.passengers[0].age is required`, `passenger.seat is not a known field` |
+| Outside a [limit](#limits) | `age must be at most 130, got 131`, `move must match the pattern ^[a-h][1-8]..., got "Nf3"`, `notes must have at most 3 items, got 4` |
 
 If anything is wrong, your function does not run. `invoke` returns a
 failed `ToolResult`, and `tool(args)` throws a `ToolArgumentException`.

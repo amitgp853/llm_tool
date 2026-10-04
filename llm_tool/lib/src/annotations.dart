@@ -92,6 +92,50 @@ class Param {
   /// characters), which every provider accepts.
   final String? name;
 
-  /// Describes a parameter, e.g. `@Param('City name, e.g. Kanpur')`.
-  const Param(this.description, {this.name});
+  /// The smallest allowed number (inclusive), for a number parameter or the
+  /// items of a list of numbers.
+  final num? min;
+
+  /// The largest allowed number (inclusive), like [min].
+  final num? max;
+
+  /// The fewest characters allowed, for a `String` parameter or the items of
+  /// a list of strings.
+  final int? minLength;
+
+  /// The most characters allowed, like [minLength].
+  final int? maxLength;
+
+  /// A regular expression the text must contain a match for, like
+  /// [minLength]. Use `^` and `\$` to match the whole text:
+  ///
+  /// ```dart
+  /// @Param('A square, e.g. e4', pattern: r'^[a-h][1-8]\$') String square
+  /// ```
+  final String? pattern;
+
+  /// The fewest items allowed, for a `List` parameter.
+  final int? minItems;
+
+  /// The most items allowed, for a `List` parameter.
+  final int? maxItems;
+
+  /// Describes a parameter, e.g. `@Param('City name, e.g. Kanpur')`, with
+  /// optional limits that go into the schema and are checked before your
+  /// function runs:
+  ///
+  /// ```dart
+  /// @Param('Age in years', min: 0, max: 130) int age
+  /// ```
+  const Param(
+    this.description, {
+    this.name,
+    this.min,
+    this.max,
+    this.minLength,
+    this.maxLength,
+    this.pattern,
+    this.minItems,
+    this.maxItems,
+  });
 }

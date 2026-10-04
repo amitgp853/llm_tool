@@ -32,6 +32,24 @@ void main() {
     });
   });
 
+  test('limits are checked before the method runs', () async {
+    final coach = ChessCoach('Amit');
+    final result = await coach.llmTools.invoke('play_move', {'move': 'Nf3'});
+    expect(result.toJson(), {
+      'error':
+          'Invalid arguments for "play_move": move must match the pattern '
+          r'^[a-h][1-8][a-h][1-8][qrbn]?$, got "Nf3"',
+    });
+    expect(coach.moves, isEmpty);
+    expect(coach.llmTools.first.parametersSchema['properties'], {
+      'move': {
+        'type': 'string',
+        'pattern': r'^[a-h][1-8][a-h][1-8][qrbn]?$',
+        'description': 'The move in UCI, e.g. e2e4',
+      },
+    });
+  });
+
   test('requiresConfirmation works on methods', () async {
     final coach = ChessCoach('Amit')..moves.add('e2e4');
     final tools = coach.llmTools;

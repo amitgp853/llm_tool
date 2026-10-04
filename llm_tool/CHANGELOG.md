@@ -5,6 +5,12 @@
   fields, e.g. a repository or an API client. The generator adds an
   `llmTools` getter: `CoachTools(engine, games).llmTools`. Static methods
   work too.
+- **Limits on parameters.** `@Param` takes `min`, `max`, `minLength`,
+  `maxLength`, `pattern`, `minItems` and `maxItems`. They go into the JSON
+  Schema, and `call()` and `invoke()` reject arguments outside them with a
+  message for the LLM, e.g. `age must be at most 130, got 131`.
+- `validateArguments` checks `minimum`, `maximum`, `minLength`,
+  `maxLength`, `pattern`, `minItems` and `maxItems` in any schema.
 
 ## 0.7.0
 

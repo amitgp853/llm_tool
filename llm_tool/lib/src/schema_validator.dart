@@ -77,6 +77,8 @@ void _checkValue(
     return;
   }
 
+  _checkLimits(path, value, schema, errors);
+
   if (value is List) {
     for (final (index, item) in value.indexed) {
       _checkValue('$path[$index]', item, schema['items'], errors);
@@ -86,6 +88,74 @@ void _checkValue(
     _checkObject(path, value, schema, errors);
   }
 }
+
+/// Checks the JSON Schema limits: minimum, maximum, minLength, maxLength,
+/// pattern, minItems and maxItems.
+void _checkLimits(
+  String path,
+  Object? value,
+  Map<Object?, Object?> schema,
+  List<String> errors,
+) {
+  if (value is num) {
+    if (schema['minimum'] case final num min when value < min) {
+      errors.add(
+        '$path must be at least ${_number(min)}, got ${_number(value)}',
+      );
+    }
+    if (schema['maximum'] case final num max when value > max) {
+      errors.add(
+        '$path must be at most ${_number(max)}, got ${_number(value)}',
+      );
+    }
+  }
+  if (value is String) {
+    // JSON Schema counts characters (code points), not UTF-16 units.
+    final length = value.runes.length;
+    if (schema['minLength'] case final int min when length < min) {
+      errors.add(
+        '$path must be at least ${_count(min, 'character')}, got $length',
+      );
+    }
+    if (schema['maxLength'] case final int max when length > max) {
+      errors.add(
+        '$path must be at most ${_count(max, 'character')}, got $length',
+      );
+    }
+    if (schema['pattern'] case final String pattern
+        when _regExp(pattern)?.hasMatch(value) == false) {
+      errors.add('$path must match the pattern $pattern, got ${_quote(value)}');
+    }
+  }
+  if (value is List) {
+    if (schema['minItems'] case final int min when value.length < min) {
+      errors.add(
+        '$path must have at least ${_count(min, 'item')}, got ${value.length}',
+      );
+    }
+    if (schema['maxItems'] case final int max when value.length > max) {
+      errors.add(
+        '$path must have at most ${_count(max, 'item')}, got ${value.length}',
+      );
+    }
+  }
+}
+
+/// [pattern] as JSON Schema reads it (ECMAScript with the `u` flag), or null
+/// if it's invalid: a malformed hand-written schema shouldn't crash.
+RegExp? _regExp(String pattern) {
+  try {
+    return RegExp(pattern, unicode: true);
+  } on FormatException {
+    return null;
+  }
+}
+
+/// `5` rather than `5.0` for whole numbers.
+String _number(num value) =>
+    value is double && _isWhole(value) ? '${value.toInt()}' : '$value';
+
+String _count(int count, String noun) => '$count $noun${count == 1 ? '' : 's'}';
 
 String _quote(Object? value) => value is String ? '"$value"' : '$value';
 
