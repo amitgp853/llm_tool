@@ -9,6 +9,10 @@
   `maxLength`, `pattern`, `minItems` and `maxItems`. They go into the JSON
   Schema, and `call()` and `invoke()` reject arguments outside them with a
   message for the LLM, e.g. `age must be at most 130, got 131`.
+- **`toolSchemaSnapshot(tools)`** for snapshot tests: everything the LLM
+  sees of your tools as stable, indented JSON, so a renamed parameter or
+  edited doc comment shows up in review. No new dependencies. See
+  "Testing your tools" in the README.
 - `validateArguments` checks `minimum`, `maximum`, `minLength`,
   `maxLength`, `pattern`, `minItems` and `maxItems` in any schema.
 

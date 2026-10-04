@@ -1,0 +1,239 @@
+[
+  {
+    "name": "getWeather",
+    "description": "Gets the current weather for a city.",
+    "requiresConfirmation": false,
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "city": {
+          "type": "string",
+          "description": "City name, e.g. Kanpur"
+        },
+        "celsius": {
+          "type": "boolean",
+          "description": "Use Celsius instead of Fahrenheit"
+        }
+      },
+      "required": [
+        "city"
+      ],
+      "additionalProperties": false
+    }
+  },
+  {
+    "name": "convertTemperature",
+    "description": "Converts a temperature between units.",
+    "requiresConfirmation": false,
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "value": {
+          "type": "number",
+          "description": "The temperature to convert"
+        },
+        "from": {
+          "type": "string",
+          "enum": [
+            "celsius",
+            "fahrenheit",
+            "kelvin"
+          ],
+          "description": "Unit to convert from"
+        },
+        "to": {
+          "type": "string",
+          "enum": [
+            "celsius",
+            "fahrenheit",
+            "kelvin"
+          ],
+          "description": "Unit to convert to"
+        }
+      },
+      "required": [
+        "value",
+        "from"
+      ],
+      "additionalProperties": false
+    }
+  },
+  {
+    "name": "averageTemperature",
+    "description": "Averages a list of temperatures, converting each to one unit first.",
+    "requiresConfirmation": false,
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "readings": {
+          "type": "array",
+          "items": {
+            "type": "number"
+          },
+          "description": "Readings to average"
+        },
+        "units": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "enum": [
+              "celsius",
+              "fahrenheit",
+              "kelvin"
+            ]
+          },
+          "description": "Unit of each reading, same order as readings"
+        }
+      },
+      "required": [
+        "readings"
+      ],
+      "additionalProperties": false
+    }
+  },
+  {
+    "name": "bookFlight",
+    "description": "Books a flight and returns a confirmation summary.",
+    "requiresConfirmation": true,
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "booking": {
+          "type": "object",
+          "description": "One flight booking request.",
+          "properties": {
+            "from": {
+              "type": "string",
+              "description": "Departure airport code, e.g. DEL."
+            },
+            "to": {
+              "type": "string",
+              "description": "Arrival airport code, e.g. BOM."
+            },
+            "passengers": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "description": "A person on the flight.",
+                "properties": {
+                  "name": {
+                    "type": "string",
+                    "description": "Full name as on the passport."
+                  },
+                  "age": {
+                    "type": "integer"
+                  },
+                  "bags": {
+                    "type": "integer",
+                    "description": "Checked bags."
+                  }
+                },
+                "required": [
+                  "name",
+                  "age"
+                ],
+                "additionalProperties": false
+              }
+            },
+            "cabin": {
+              "type": "string",
+              "enum": [
+                "economy",
+                "business"
+              ]
+            }
+          },
+          "required": [
+            "from",
+            "to",
+            "passengers"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "required": [
+        "booking"
+      ],
+      "additionalProperties": false
+    }
+  },
+  {
+    "name": "get_move",
+    "description": "Gets one move of a game by its number.",
+    "requiresConfirmation": false,
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "game_id": {
+          "type": "integer",
+          "description": "A game id"
+        },
+        "move_number": {
+          "type": "integer",
+          "description": "Move number"
+        },
+        "with_eval": {
+          "type": "boolean",
+          "description": "Include the evaluation"
+        }
+      },
+      "required": [
+        "game_id",
+        "move_number"
+      ],
+      "additionalProperties": false
+    }
+  },
+  {
+    "name": "play_move",
+    "description": "Plays a move in the current game.",
+    "requiresConfirmation": false,
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "move": {
+          "type": "string",
+          "pattern": "^[a-h][1-8][a-h][1-8][qrbn]?$",
+          "description": "The move in UCI, e.g. e2e4"
+        }
+      },
+      "required": [
+        "move"
+      ],
+      "additionalProperties": false
+    }
+  },
+  {
+    "name": "history",
+    "description": "Lists the moves played so far.",
+    "requiresConfirmation": false,
+    "parameters": {
+      "type": "object",
+      "properties": {},
+      "required": [],
+      "additionalProperties": false
+    }
+  },
+  {
+    "name": "resign",
+    "description": "Starts a new game, losing the current one.",
+    "requiresConfirmation": true,
+    "parameters": {
+      "type": "object",
+      "properties": {},
+      "required": [],
+      "additionalProperties": false
+    }
+  },
+  {
+    "name": "engineVersion",
+    "description": "The chess engine's version.",
+    "requiresConfirmation": false,
+    "parameters": {
+      "type": "object",
+      "properties": {},
+      "required": [],
+      "additionalProperties": false
+    }
+  }
+]

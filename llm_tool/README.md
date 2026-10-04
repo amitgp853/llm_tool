@@ -578,6 +578,39 @@ Good to know:
 - `validateArguments(schema, args)` is public if you want to validate
   hand-written schemas yourself.
 
+## Testing your tools
+
+Your doc comments and parameter names *are* the prompt the LLM reads, so a
+small rename can change how well the model uses a tool. A snapshot test
+makes every such change visible in review:
+
+```dart
+import 'dart:io';
+
+import 'package:llm_tool/llm_tool.dart';
+import 'package:test/test.dart';
+import 'package:my_app/tools.dart';
+
+void main() {
+  // If a change is intended, delete test/tool_schemas.json and run again.
+  test('tool schemas', () {
+    final file = File('test/tool_schemas.json');
+    final snapshot = toolSchemaSnapshot(allTools);
+    if (!file.existsSync()) file.writeAsStringSync(snapshot);
+    expect(snapshot, file.readAsStringSync());
+  });
+}
+```
+
+`toolSchemaSnapshot` writes each tool's name, description,
+`requiresConfirmation` and parameters as indented JSON, in the order the
+LLM sees them, so the file diffs well in a pull request. Commit it. For a
+toolset, pass `MyTools(...).llmTools`; the schemas don't depend on the
+instance, so test fakes are fine.
+
+To test what a tool *does*, call it like a function:
+`expect(await getWeatherTool({'city': 'Kanpur'}), contains('Kanpur'))`.
+
 ## Troubleshooting
 
 **`Undefined name 'getWeatherTool'`**
