@@ -1,3 +1,19 @@
+## 0.6.0
+
+- Built-in support for every major SDK, with no extra packages:
+  `toOpenAiJson()`, `toOpenAiResponsesJson()`, `toAnthropicJson()`,
+  `toGeminiJson()` and `toMcpJson()` on a tool or a list of tools (e.g.
+  `allTools`). Each format is tested against the real SDK
+  (`openai_dart`, `anthropic_sdk_dart`, `mcp_dart`).
+- `tool.invoke(args, confirm: ...)` and `allTools.invoke(name, arguments)` run
+  a model's call and never throw: validation, confirmation for
+  `requiresConfirmation` tools, the run, and a JSON-safe `ToolResult`
+  (`toText()`, `toJson()`, `isError`). Arguments can be a map or a JSON
+  string.
+- `ToolConfirmation`, the callback that asks the user.
+- README: "Use with your SDK" with OpenAI, Claude, MCP and Firebase examples
+  (compiled and run in the tests).
+
 ## 0.5.0
 
 - `@Param(name: ...)` sets the name the LLM sees and sends, e.g.

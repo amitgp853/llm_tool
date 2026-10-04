@@ -1,3 +1,8 @@
+## 0.6.0
+
+- No changes in the generated code. Requires `llm_tool_calling` 0.6.0, which
+  adds built-in SDK formats and `invoke`.
+
 ## 0.5.0
 
 - Supports `@Param(name: ...)`: the schema, `required` and validation use the

@@ -102,62 +102,108 @@ String getWeather(
 Rename a parameter, add one, or change a default, and the schema and
 dispatch code follow on the next build.
 
-## Sending tools to your LLM
-
-`ToolDefinition` is provider-neutral. Map it to the shape your provider
-expects, for example:
-
-```dart
-// OpenAI Chat Completions
-{
-  'type': 'function',
-  'function': {
-    'name': tool.name,
-    'description': tool.description,
-    'parameters': tool.parametersSchema,
-  },
-}
-
-// Anthropic Messages
-{
-  'name': tool.name,
-  'description': tool.description,
-  'input_schema': tool.parametersSchema,
-}
-
-// Gemini (2.5 and later): use `parametersJsonSchema`, not `parameters`.
-// The older `parameters` field rejects `additionalProperties`.
-{
-  'name': tool.name,
-  'description': tool.description,
-  'parametersJsonSchema': tool.parametersSchema,
-}
-```
-
-When the model replies with a tool call, look the tool up by name and call
-it with the decoded arguments:
-
-```dart
-final tools = {for (final t in allTools) t.name: t};
-
-final tool = tools[toolCall.name]!;
-try {
-  final result = await tool(jsonDecode(toolCall.arguments));
-  // Send `result` back to the model as the tool result.
-} on ToolArgumentException catch (e) {
-  // Send `e.toString()` back as the tool result; the model can fix its call.
-}
-```
-
 ## Use with your SDK
 
-Adapter packages turn `allTools` into your SDK's tool objects, including
-validation and confirmation handling:
+Everything is built in: no extra package for OpenAI, Claude, Gemini or MCP.
+Every tool converts to each provider's JSON, and one call runs the model's
+tool call:
 
-| You use | Add | Then |
-|---|---|---|
-| Firebase AI Logic ([`firebase_ai`](https://pub.dev/packages/firebase_ai)) | [`llm_tool_calling_firebase_ai`](https://pub.dev/packages/llm_tool_calling_firebase_ai) | `chat.sendMessageWithTools(message, allTools)` |
-| [`llm_sdk`](https://pub.dev/packages/llm_sdk), [`flutter_ai_tools`](https://pub.dev/packages/flutter_ai_tools) | Coming soon | See [Sending tools to your LLM](#sending-tools-to-your-llm) meanwhile |
+| Method | For |
+|---|---|
+| `allTools.toOpenAiJson()` | OpenAI Chat Completions, and compatible APIs (Mistral, Groq, DeepSeek...) |
+| `allTools.toOpenAiResponsesJson()` | OpenAI Responses API |
+| `allTools.toAnthropicJson()` | Anthropic (Claude) |
+| `allTools.toGeminiJson()` | Gemini (sent as `parametersJsonSchema`) |
+| `allTools.toMcpJson()` | Model Context Protocol servers |
+| `allTools.invoke(name, arguments)` | Running a call: validates, asks for confirmation, runs, and never throws |
+
+`invoke` accepts the arguments as a map or as a JSON string (how OpenAI
+sends them) and returns a `ToolResult`: send `result.toText()` (or
+`result.toJson()` for APIs that take an object) back to the model, and use
+`result.isError` where the API has an error flag. Invalid arguments, unknown
+tools and exceptions from your function all become an error the model can
+read and fix.
+
+**OpenAI** ([`openai_dart`](https://pub.dev/packages/openai_dart)):
+
+```dart
+final tools = allTools.toOpenAiJson().map(openai.Tool.fromJson).toList();
+
+// For each tool call in the model's reply:
+final result = await allTools.invoke(
+  call.function.name,
+  call.function.arguments, // a JSON string
+);
+final reply = openai.ChatMessage.tool(
+  toolCallId: call.id,
+  content: result.toText(),
+);
+```
+
+**Claude** ([`anthropic_sdk_dart`](https://pub.dev/packages/anthropic_sdk_dart)):
+
+```dart
+final tools = allTools.toAnthropicJson().map(anthropic.Tool.fromJson);
+
+// For each tool_use block in Claude's reply:
+final result = await allTools.invoke(toolUse.name, toolUse.input);
+final block = anthropic.InputContentBlock.toolResultText(
+  toolUseId: toolUse.id,
+  text: result.toText(),
+  isError: result.isError,
+);
+```
+
+**MCP server** ([`mcp_dart`](https://pub.dev/packages/mcp_dart)): serve your
+tools to Claude Desktop, Cursor and other MCP clients.
+
+```dart
+final server = mcp.McpServer(
+  const mcp.Implementation(name: 'weather', version: '1.0.0'),
+);
+for (final tool in allTools.toMcpJson().map(mcp.Tool.fromJson)) {
+  server.registerTool(
+    tool.name,
+    description: tool.description,
+    inputSchema: tool.inputSchema as mcp.JsonObject,
+    annotations: tool.annotations, // destructiveHint from requiresConfirmation
+    callback: (args, extra) async {
+      final result = await allTools.invoke(tool.name, args);
+      return mcp.CallToolResult(
+        content: [mcp.TextContent(text: result.toText())],
+        isError: result.isError,
+      );
+    },
+  );
+}
+await server.connect(mcp.StdioServerTransport());
+```
+
+**Firebase AI Logic** ([`firebase_ai`](https://pub.dev/packages/firebase_ai)):
+use the [`llm_tool_calling_firebase_ai`](https://pub.dev/packages/llm_tool_calling_firebase_ai)
+adapter, which runs the whole loop with `chat.sendMessageWithTools(message, allTools)`.
+firebase_ai needs typed schema objects rather than JSON, so that part lives
+in its own package.
+
+**Plain HTTP, or any other SDK:** send the JSON from the table above in your
+request, and pass each call to `allTools.invoke(name, arguments)`.
+
+### Tools that need confirmation
+
+Pass `confirm` to `invoke` to ask the user before running a tool marked
+`@Tool(requiresConfirmation: true)`. It's called after validation, so users
+are never asked about a call that would fail:
+
+```dart
+final result = await allTools.invoke(
+  name,
+  arguments,
+  confirm: (tool, args) => showConfirmDialog(tool.name, args),
+);
+```
+
+Without `confirm`, these tools never run, and the model is told they need
+the user's confirmation. If the user declines, the model is told that too.
 
 ## Compatibility
 
@@ -166,14 +212,14 @@ Generated schemas use plain JSON Schema (`type`, `properties`, `required`,
 generated tool and parameter names follow the strictest provider rules. They
 work with:
 
-| Provider | Put `parametersSchema` in | Arguments arrive as | Notes |
+| Provider | Use | Arguments arrive as | Notes |
 |---|---|---|---|
-| **OpenAI** (Chat Completions, Responses) | `tools[].function.parameters` (`tools[].parameters` in Responses) | JSON **string**: `jsonDecode` it | Works as-is. Strict mode (`strict: true`) also needs every field in `required`, so it only fits tools without optional parameters. |
-| **Anthropic Claude** | `tools[].input_schema` | Object (`input`) | Current models don't allow forced `tool_choice`; use `auto` and name the tool in your prompt. |
-| **Google Gemini** 2.5+ | `functionDeclarations[].parametersJsonSchema` | Object (`args`) | Use `parametersJsonSchema`, **not** `parameters`: the older field rejects `additionalProperties`. Works with `firebase_ai` via the same field. |
-| **Mistral** | `tools[].function.parameters` | JSON string | Same shape as OpenAI. |
-| **Ollama** (local models) | `tools[].function.parameters` | Object | How well the model fills nested objects depends on the model. |
-| Other OpenAI-compatible APIs (DeepSeek, Groq, xAI…) | Same as OpenAI | Usually a JSON string | Same request shape as OpenAI. |
+| **OpenAI** (Chat Completions, Responses) | `toOpenAiJson()` / `toOpenAiResponsesJson()` | JSON **string** (`invoke` accepts it as is) | Works as-is. Strict mode (`strict: true`) also needs every field in `required`, so it only fits tools without optional parameters. |
+| **Anthropic Claude** | `toAnthropicJson()` | Object (`input`) | Current models don't allow forced `tool_choice`; use `auto` and name the tool in your prompt. |
+| **Google Gemini** 2.5+ | `toGeminiJson()` (`parametersJsonSchema`) | Object (`args`) | Use `parametersJsonSchema`, **not** `parameters`: the older field rejects `additionalProperties`. Works with `firebase_ai` via the same field. |
+| **Mistral** | `toOpenAiJson()` | JSON string | Same shape as OpenAI. |
+| **Ollama** (local models) | `toOpenAiJson()` | Object | How well the model fills nested objects depends on the model. |
+| Other OpenAI-compatible APIs (DeepSeek, Groq, xAI…) | `toOpenAiJson()` | Usually a JSON string | Same request shape as OpenAI. |
 
 Some SDKs still send schemas to Gemini in the older `parameters` field. If
 yours does, pass `withoutAdditionalProperties(tool.parametersSchema)`
@@ -373,8 +419,8 @@ All of them write into the same shared `.g.dart` part.
 
 ## Roadmap
 
-- Adapters for `llm_sdk` and `flutter_ai_tools` (the `firebase_ai` adapter
-  is available).
+- An optional MCP package that registers `allTools` on an `McpServer` in one
+  line (today it's the short loop shown above).
 - `llm_tool_calling_flutter`: an approval widget for
   `requiresConfirmation` tools.
 

@@ -1,3 +1,12 @@
+## 0.2.0
+
+- Uses `ToolDefinition.invoke` from `llm_tool_calling` 0.6.0, so tools behave
+  the same with every SDK. `ToolConfirmation` now comes from
+  `llm_tool_calling` (still available through this package).
+- If a tool throws during firebase_ai's automatic function calling, Gemini
+  now gets a clear `error`.
+- Requires `llm_tool_calling` 0.6.0.
+
 ## 0.1.1
 
 - Works with `llm_tool_calling` 0.5.x (and still 0.3.x and 0.4.x).

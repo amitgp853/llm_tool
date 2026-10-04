@@ -1,17 +1,8 @@
-import 'dart:async';
-
 import 'package:firebase_ai/firebase_ai.dart';
 // firebase_ai has its own Tool class; ours is the annotation, not needed here.
 import 'package:llm_tool_calling/llm_tool_calling.dart' hide Tool;
 
 import 'json_schema.dart';
-
-/// Asks the user whether [tool] may run with [args]. Return `true` to run it.
-///
-/// Only called for tools marked `@Tool(requiresConfirmation: true)`, and only
-/// after the arguments passed validation.
-typedef ToolConfirmation =
-    FutureOr<bool> Function(ToolDefinition tool, Map<String, Object?> args);
 
 /// Converts one tool to firebase_ai declarations.
 extension ToolDefinitionFirebaseAi on ToolDefinition {
@@ -41,7 +32,7 @@ extension ToolDefinitionFirebaseAi on ToolDefinition {
       description: description,
       parameters: properties,
       optionalParameters: optional,
-      callable: (args) => _run(this, args, confirm),
+      callable: (args) async => (await invoke(args, confirm: confirm)).toJson(),
     );
   }
 }
@@ -90,19 +81,8 @@ extension ToolListFirebaseAi on Iterable<ToolDefinition> {
     FunctionCall call, {
     ToolConfirmation? confirm,
   }) async {
-    _checkUniqueNames();
-    Map<String, Object?> response;
-    final tool = where((tool) => tool.name == call.name).firstOrNull;
-    if (tool == null) {
-      response = {'error': 'There is no tool named "${call.name}".'};
-    } else {
-      try {
-        response = await _run(tool, call.args, confirm);
-      } catch (error) {
-        response = {'error': '$error'};
-      }
-    }
-    return FunctionResponse(call.name, response, id: call.id);
+    final result = await invoke(call.name, call.args, confirm: confirm);
+    return FunctionResponse(call.name, result.toJson(), id: call.id);
   }
 
   /// firebase_ai keeps tools in a map by name, so a duplicate would silently
@@ -119,49 +99,6 @@ extension ToolListFirebaseAi on Iterable<ToolDefinition> {
     }
   }
 }
-
-/// Validates, asks for confirmation if needed, runs, and converts the result
-/// to the map firebase_ai sends to the model.
-Future<Map<String, Object?>> _run(
-  ToolDefinition tool,
-  Map<String, Object?> args,
-  ToolConfirmation? confirm,
-) async {
-  // Validate first, so nobody is asked to confirm a call that would fail.
-  final errors = validateArguments(tool.parametersSchema, args);
-  if (errors.isNotEmpty) {
-    return {'error': ToolArgumentException(tool.name, errors).toString()};
-  }
-
-  if (tool.requiresConfirmation) {
-    if (confirm == null) {
-      return {
-        'error':
-            'The tool "${tool.name}" needs the user\'s confirmation, and this '
-            'app has not set that up, so it was not run.',
-      };
-    }
-    if (!await confirm(tool, args)) {
-      return {'error': 'The user declined to run "${tool.name}".'};
-    }
-  }
-
-  return switch (_jsonSafe(await tool.execute(args))) {
-    final Map<String, Object?> map => map,
-    final value => {'result': value},
-  };
-}
-
-/// [value] as JSON-encodable data. Unknown objects become their `toString()`.
-Object? _jsonSafe(Object? value) => switch (value) {
-  null || String() || num() || bool() => value,
-  List() => [for (final item in value) _jsonSafe(item)],
-  Map() => <String, Object?>{
-    for (final MapEntry(:key, :value) in value.entries)
-      '$key': _jsonSafe(value),
-  },
-  _ => value.toString(),
-};
 
 /// Runs tools in a chat, so you don't write the tool-call loop yourself.
 ///

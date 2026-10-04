@@ -17,6 +17,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "14.4.0"
+  anthropic_sdk_dart:
+    dependency: transitive
+    description:
+      name: anthropic_sdk_dart
+      sha256: "87100b2d9f8138a4c74106bd54ca93d914630c39d6edc082e8f13b5ceab55c79"
+      url: "https://pub.dev"
+    source: hosted
+    version: "9.0.0"
   args:
     dependency: transitive
     description:
@@ -209,6 +217,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "0.15.7"
+  http:
+    dependency: transitive
+    description:
+      name: http
+      sha256: "87721a4a50b19c7f1d49001e51409bddc46303966ce89a65af4f4e6004896412"
+      url: "https://pub.dev"
+    source: hosted
+    version: "1.6.0"
   http_multi_server:
     dependency: transitive
     description:
@@ -265,6 +281,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "0.12.20"
+  mcp_dart:
+    dependency: transitive
+    description:
+      name: mcp_dart
+      sha256: "5a185c1c02e90239e6f3ebca05ef51e04ac0f9c2b1b7ec7ffbb1a671a6379729"
+      url: "https://pub.dev"
+    source: hosted
+    version: "2.4.2"
   meta:
     dependency: transitive
     description:
@@ -289,6 +313,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "2.0.2"
+  openai_dart:
+    dependency: transitive
+    description:
+      name: openai_dart
+      sha256: "29f757e44cc2f969c4d4955f7be596ff77aee230dde35297bde192848b43a2b9"
+      url: "https://pub.dev"
+    source: hosted
+    version: "10.0.0"
   package_config:
     dependency: transitive
     description:
@@ -522,4 +554,4 @@ packages:
     source: hosted
     version: "3.1.4"
 sdks:
-  dart: ">=3.11.0 <4.0.0"
+  dart: ">=3.12.0 <4.0.0"

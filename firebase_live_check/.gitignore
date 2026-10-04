@@ -49,3 +49,6 @@ app.*.map.json
 
 # Written by `flutterfire configure` for your own Firebase project.
 firebase.json
+
+# Local only: use the workspace packages until they are on pub.dev.
+pubspec_overrides.yaml
