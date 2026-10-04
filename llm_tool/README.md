@@ -701,9 +701,6 @@ To test what a tool *does*, call it like a function:
   list, `min`, `max`, `minLength`, `maxLength` and `pattern` apply to the
   items, and `minItems` and `maxItems` to the list.
 
-**`Conflicting outputs were detected`**
-- Run `dart run build_runner build --delete-conflicting-outputs`.
-
 **Using `json_serializable` or `freezed` in the same file?** That's fine.
 All of them write into the same shared `.g.dart` part.
 

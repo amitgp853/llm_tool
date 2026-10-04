@@ -144,9 +144,6 @@ package (e.g. `flutter_ai_core`) also has a `ToolDefinition`. Import
 `llm_tool` with a prefix (`as ltc`) and use `@ltc.LlmTool()`; the
 generated code follows your prefix.
 
-**`Conflicting outputs were detected`**: run
-`dart run build_runner build --delete-conflicting-outputs`.
-
 More in the
 [full troubleshooting guide](https://pub.dev/packages/llm_tool#troubleshooting).
 
