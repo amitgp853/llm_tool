@@ -1,3 +1,9 @@
+## Unreleased
+
+- Supports `@Param(name: ...)`: the schema, `required` and validation use the
+  JSON name, while your function is still called with its Dart parameter
+  names. Invalid or duplicate JSON names are build-time errors.
+
 ## 0.4.0
 
 - The generated code uses your import prefix for `ToolDefinition`, so

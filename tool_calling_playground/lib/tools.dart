@@ -53,3 +53,11 @@ String bookFlight(models.Booking booking) {
   return '${booking.from}->${booking.to}, ${booking.cabin.name}: '
       '${names.join(', ')}';
 }
+
+/// Gets one move of a game by its number.
+@Tool(name: 'get_move')
+String getMove(
+  @Param('A game id', name: 'game_id') int gameId,
+  @Param('Move number', name: 'move_number') int moveNumber, {
+  @Param('Include the evaluation', name: 'with_eval') bool withEval = false,
+}) => 'game $gameId, move $moveNumber${withEval ? ' (+0.3)' : ''}';

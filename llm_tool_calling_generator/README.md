@@ -85,6 +85,8 @@ The list is named after the file: `tools.dart` gives `allTools`,
   parameters (lists of any of these, including nested lists): positional or
   named, nullable or not, with or without defaults.
 - Descriptions from `@Tool(description: ...)` or the doc comment.
+- Custom JSON names with `@Param('...', name: 'game_id')`, so your Dart
+  code keeps camelCase while the LLM sees snake case.
 
 - Class parameters become nested object schemas, built through the class's
   unnamed constructor. freezed classes work too. See

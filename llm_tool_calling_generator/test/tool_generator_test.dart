@@ -937,6 +937,78 @@ void two() {}
     });
   });
 
+  group('JSON names with @Param(name:)', () {
+    test('the LLM sees the JSON name; Dart keeps its own name', () async {
+      final output = await _generate('''
+/// Doc.
+@Tool()
+void f(
+  @Param('A game id', name: 'game_id') int gameId, {
+  @Param('Move number', name: 'move_number') int moveNumber = 1,
+  @Param('Nickname', name: 'nick_name') String? nickName,
+}) {}
+''');
+      final code = _withoutSpaces(output);
+      expect(
+        code,
+        contains('"game_id":{"type":"integer","description":"Agameid"}'),
+      );
+      expect(code, contains('"move_number":{"type":"integer"'));
+      expect(code, contains('"nick_name":{"type":"string"'));
+      expect(code, contains('"required":["game_id"]'));
+      expect(code, isNot(contains('"gameId"')));
+      expect(
+        code,
+        contains(
+          'f((args["game_id"]asnum).toInt(),'
+          'moveNumber:(args["move_number"]asnum?)?.toInt()??1,'
+          'nickName:args["nick_name"]asString?)',
+        ),
+      );
+    });
+
+    test('works for class fields', () async {
+      final output = await _generate('''
+class Seat {
+  Seat(@Param('Row number', name: 'row_number') this.row);
+  final int row;
+}
+
+/// Doc.
+@Tool()
+void f(Seat seat) {}
+''');
+      final code = _withoutSpaces(output);
+      expect(code, contains('"row_number":{"type":"integer"'));
+      expect(code, contains('Seat((json["row_number"]asnum).toInt())'));
+    });
+
+    test('an invalid name is a clear error', () async {
+      expect(
+        await _buildErrors('''
+/// Doc.
+@Tool()
+void f(@Param('Id', name: 'game id') int gameId) {}
+'''),
+        allOf(
+          contains('Parameter "game id" has a name some LLM providers reject'),
+          contains('Change it in @Param(name: ...).'),
+        ),
+      );
+    });
+
+    test('two parameters with the same JSON name are an error', () async {
+      expect(
+        await _buildErrors('''
+/// Doc.
+@Tool()
+void f(@Param('First', name: 'b') int a, int b) {}
+'''),
+        contains('Two parameters are named "b" for the LLM.'),
+      );
+    });
+  });
+
   group('return types', () {
     test('void function returns null', () async {
       final output = await _generate('''

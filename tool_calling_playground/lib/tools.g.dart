@@ -166,10 +166,32 @@ final bookFlightTool = ToolDefinition(
   ),
 );
 
+final getMoveTool = ToolDefinition(
+  name: "get_move",
+  description: "Gets one move of a game by its number.",
+  parametersSchema: {
+    "type": "object",
+    "properties": {
+      "game_id": {"type": "integer", "description": "A game id"},
+      "move_number": {"type": "integer", "description": "Move number"},
+      "with_eval": {"type": "boolean", "description": "Include the evaluation"},
+    },
+    "required": ["game_id", "move_number"],
+    "additionalProperties": false,
+  },
+  requiresConfirmation: false,
+  execute: (args) => getMove(
+    (args["game_id"] as num).toInt(),
+    (args["move_number"] as num).toInt(),
+    withEval: args["with_eval"] as bool? ?? false,
+  ),
+);
+
 /// Every tool in this file, e.g. to send to an LLM or look up by name.
 final List<ToolDefinition> allTools = [
   getWeatherTool,
   convertTemperatureTool,
   averageTemperatureTool,
   bookFlightTool,
+  getMoveTool,
 ];

@@ -40,6 +40,17 @@ class Param {
   /// The description included in the parameter's JSON schema.
   final String description;
 
+  /// The name the LLM sees and sends, if it should differ from the Dart
+  /// name, e.g. snake case for `gameId`:
+  ///
+  /// ```dart
+  /// @Param('A game id', name: 'game_id') int gameId
+  /// ```
+  ///
+  /// Must start with a letter or `_`, then letters, digits or `_` (up to 64
+  /// characters), which every provider accepts.
+  final String? name;
+
   /// Describes a parameter, e.g. `@Param('City name, e.g. Kanpur')`.
-  const Param(this.description);
+  const Param(this.description, {this.name});
 }

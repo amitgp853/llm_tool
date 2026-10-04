@@ -153,6 +153,7 @@ void main() {
         'convertTemperature',
         'averageTemperature',
         'bookFlight',
+        'get_move',
       ]);
     });
 
@@ -161,6 +162,36 @@ void main() {
       expect(
         await byName['getWeather']!({'city': 'Pune'}),
         'Sunny, 31°C in Pune',
+      );
+    });
+  });
+
+  group('getMove (JSON names)', () {
+    test('the schema uses snake_case names', () {
+      final properties = getMoveTool.parametersSchema['properties'] as Map;
+      expect(properties.keys, ['game_id', 'move_number', 'with_eval']);
+      expect(getMoveTool.parametersSchema['required'], [
+        'game_id',
+        'move_number',
+      ]);
+    });
+
+    test('JSON arguments reach the Dart parameters', () async {
+      final args =
+          jsonDecode('{"game_id": 7, "move_number": 14.0, "with_eval": true}')
+              as Map<String, Object?>;
+      expect(await getMoveTool(args), 'game 7, move 14 (+0.3)');
+    });
+
+    test('the Dart name is not accepted', () {
+      expect(
+        () => getMoveTool({'gameId': 7, 'move_number': 1}),
+        throwsA(
+          isA<ToolArgumentException>().having((e) => e.errors, 'errors', [
+            'game_id is required',
+            'gameId is not a known argument',
+          ]),
+        ),
       );
     });
   });

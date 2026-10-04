@@ -194,6 +194,7 @@ have a key for, and checks that the model's arguments pass validation.
 | `@Tool(description: '...')` | Description sent to the LLM. Defaults to the function's doc comment (`///` or `/** */`). One of the two is required. |
 | `@Tool(requiresConfirmation: true)` | Sets `ToolDefinition.requiresConfirmation`, so your app can ask the user before running it (e.g. for deleting or paying). |
 | `@Param('...')` | Description of one parameter. Optional, but it helps the LLM a lot. |
+| `@Param('...', name: 'game_id')` | The name the LLM sees and sends, e.g. snake case, while your Dart parameter stays `gameId`. Works on class fields too. |
 
 The generated variable is always `<functionName>Tool`, e.g. `getWeatherTool`,
 even when you set a custom `name`.

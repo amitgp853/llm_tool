@@ -1,3 +1,8 @@
+## Unreleased
+
+- `@Param(name: ...)` sets the name the LLM sees and sends, e.g.
+  `@Param('A game id', name: 'game_id') int gameId`.
+
 ## 0.4.0
 
 - `withoutAdditionalProperties(schema)`: a copy of a schema for SDKs that

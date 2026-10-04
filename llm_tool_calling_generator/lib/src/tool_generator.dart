@@ -175,13 +175,24 @@ class _TypeMapper {
     final named = <String>[];
 
     for (final param in params) {
-      final name = param.displayName;
+      // The name the LLM sees: @Param(name: ...) if set, else the Dart name.
+      final customName = _paramName(param);
+      final name = customName ?? param.displayName;
       final paramPath = path.isEmpty ? name : '$path.$name';
+      final kind = path.isEmpty ? 'Parameter' : 'Field';
       if (!_validParameterName.hasMatch(name)) {
         throw InvalidGenerationSource(
-          '${path.isEmpty ? 'Parameter' : 'Field'} "$paramPath" has a name '
-          'some LLM providers reject (Gemini allows only letters, digits and '
-          '"_", up to 64 characters). Rename it.',
+          '$kind "$paramPath" has a name some LLM providers reject (Gemini '
+          'allows only letters, digits and "_", starting with a letter or '
+          '"_", up to 64 characters). '
+          '${customName == null ? 'Rename it, or set a valid name with @Param(name: ...).' : 'Change it in @Param(name: ...).'}',
+          element: param,
+        );
+      }
+      if (properties.containsKey(name)) {
+        throw InvalidGenerationSource(
+          'Two parameters are named "$paramPath" for the LLM. Give one a '
+          'different @Param(name: ...).',
           element: param,
         );
       }
@@ -205,7 +216,8 @@ class _TypeMapper {
         code = '$code ?? ${_defaultValue(param, paramPath)}';
       }
       if (param.isNamed) {
-        named.add('$name: $code');
+        // Dart's own name here: the call is Dart code.
+        named.add('${param.displayName}: $code');
       } else {
         positional.add(code);
       }
@@ -456,6 +468,13 @@ String _referenceTo(Element element, LibraryElement library) {
     prefixed ??= '$prefix.$name';
   }
   return prefixed ?? name;
+}
+
+/// Reads the name from @Param(name: '...') on a parameter, if set.
+String? _paramName(Element param) {
+  final annotation = _paramChecker.firstAnnotationOf(param);
+  if (annotation == null) return null;
+  return ConstantReader(annotation).peek('name')?.stringValue;
 }
 
 /// Reads the text from @Param('...') on a parameter, if present.
