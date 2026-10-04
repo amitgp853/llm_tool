@@ -371,10 +371,11 @@ packages:
   llm_tool_calling:
     dependency: "direct main"
     description:
-      path: "../llm_tool_calling"
-      relative: true
-    source: path
-    version: "0.6.0"
+      name: llm_tool_calling
+      sha256: "731f3f188746d6cd59e08b688ba3d5cd5a065566ab93388d0f090b4cd8723e13"
+      url: "https://pub.dev"
+    source: hosted
+    version: "0.6.1"
   llm_tool_calling_firebase_ai:
     dependency: "direct main"
     description:
@@ -385,10 +386,11 @@ packages:
   llm_tool_calling_generator:
     dependency: "direct dev"
     description:
-      path: "../llm_tool_calling_generator"
-      relative: true
-    source: path
-    version: "0.6.0"
+      name: llm_tool_calling_generator
+      sha256: "0a886e5f735a3eb370a979e775f77f2406c18982cb2050581078029a3bd57424"
+      url: "https://pub.dev"
+    source: hosted
+    version: "0.6.1"
   logging:
     dependency: transitive
     description:

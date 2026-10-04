@@ -89,6 +89,10 @@ list of every tool in the file.
 **4. Use it** with your SDK (see [Use with your SDK](#use-with-your-sdk)):
 
 ```dart
+import 'package:llm_tool_calling/llm_tool_calling.dart';
+
+import 'tools.dart';
+
 final tools = allTools.toOpenAiJson(); // or toAnthropicJson(), toGeminiJson()...
 
 // When the model calls a tool:
@@ -160,6 +164,10 @@ them), and returns a `ToolResult`. Send `result.toText()` back to the model
 tools and exceptions from your function all become an error the model can
 read and fix.
 
+> **Import `llm_tool_calling` in every file that uses these methods.** They
+> are extension methods, which Dart only finds where the package is
+> imported; importing your `tools.dart` isn't enough.
+>
 > **Import SDKs with a prefix** (`as openai`, `as anthropic`, `as mcp`):
 > most AI SDKs also have classes called `Tool`, and Anthropic's has a
 > `ToolDefinition`, just like this package.
@@ -171,6 +179,9 @@ ask a question, run every tool the model calls, return its answer.
 
 ```dart
 import 'package:openai_dart/openai_dart.dart' as openai;
+import 'package:llm_tool_calling/llm_tool_calling.dart';
+
+import 'tools.dart'; // your @Tool functions and the generated allTools
 
 Future<String?> askOpenAi(String question) async {
   final client = openai.OpenAIClient.fromEnvironment(); // OPENAI_API_KEY
@@ -214,6 +225,9 @@ With [`anthropic_sdk_dart`](https://pub.dev/packages/anthropic_sdk_dart):
 
 ```dart
 import 'package:anthropic_sdk_dart/anthropic_sdk_dart.dart' as anthropic;
+import 'package:llm_tool_calling/llm_tool_calling.dart';
+
+import 'tools.dart'; // your @Tool functions and the generated allTools
 
 Future<String> askClaude(String question) async {
   final client = anthropic.AnthropicClient.fromEnvironment(); // ANTHROPIC_API_KEY
@@ -276,6 +290,9 @@ Claude Desktop, Cursor and other MCP clients.
 
 ```dart
 import 'package:mcp_dart/mcp_dart.dart' as mcp;
+import 'package:llm_tool_calling/llm_tool_calling.dart';
+
+import 'tools.dart'; // your @Tool functions and the generated allTools
 
 Future<void> main() async {
   final server = mcp.McpServer(
@@ -497,6 +514,12 @@ Good to know:
   `flutter_ai_core`). Import one of them with a prefix, e.g.
   `import 'package:llm_tool_calling/llm_tool_calling.dart' as ltc;` and
   annotate with `@ltc.Tool()`. The generated code follows your prefix.
+
+**`The method 'toOpenAiJson' isn't defined for the type 'List'`** (or
+`invoke`, `toAnthropicJson`, ...)
+- Add `import 'package:llm_tool_calling/llm_tool_calling.dart';` to that
+  file. These are extension methods, and importing only your `tools.dart`
+  doesn't bring them into scope.
 
 **`Could not resolve annotation for ...`**
 - The file uses `@Tool` without importing

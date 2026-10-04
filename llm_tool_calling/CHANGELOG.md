@@ -1,3 +1,11 @@
+## 0.6.2
+
+- README: every "Use with your SDK" example now imports
+  `package:llm_tool_calling/llm_tool_calling.dart`. `toOpenAiJson()`,
+  `invoke()` and the other list methods are extension methods, so a file
+  that only imports your `tools.dart` can't see them. Added a
+  troubleshooting entry for the resulting error. No code changes.
+
 ## 0.6.1
 
 - Added the package homepage (https://amitgp.dev).
