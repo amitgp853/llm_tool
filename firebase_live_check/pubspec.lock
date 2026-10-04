@@ -368,29 +368,29 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "6.1.0"
-  llm_tool_calling:
+  llm_tool:
     dependency: "direct main"
     description:
-      name: llm_tool_calling
-      sha256: "731f3f188746d6cd59e08b688ba3d5cd5a065566ab93388d0f090b4cd8723e13"
+      name: llm_tool
+      sha256: ed614b92ad4fa99c5b4342bbabb55a5713b9f95c826354fd86a207b67b10222d
       url: "https://pub.dev"
     source: hosted
-    version: "0.6.1"
-  llm_tool_calling_firebase_ai:
+    version: "0.7.0"
+  llm_tool_firebase_ai:
     dependency: "direct main"
     description:
-      path: "../llm_tool_calling_firebase_ai"
+      path: "../llm_tool_firebase_ai"
       relative: true
     source: path
-    version: "0.2.0"
-  llm_tool_calling_generator:
+    version: "0.3.0"
+  llm_tool_generator:
     dependency: "direct dev"
     description:
-      name: llm_tool_calling_generator
-      sha256: "0a886e5f735a3eb370a979e775f77f2406c18982cb2050581078029a3bd57424"
+      name: llm_tool_generator
+      sha256: "47c75bf2307895f29de27b1699e0ed0e5dc2119ae89a0aa93aa01ef349fc73f4"
       url: "https://pub.dev"
     source: hosted
-    version: "0.6.1"
+    version: "0.7.0"
   logging:
     dependency: transitive
     description:
