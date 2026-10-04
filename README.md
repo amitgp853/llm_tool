@@ -19,6 +19,7 @@ argument validation and type-safe dispatch.
 |---|---|
 | [`llm_tool_calling`](llm_tool_calling) | Annotations, `ToolDefinition` and argument validation. |
 | [`llm_tool_calling_generator`](llm_tool_calling_generator) | The `build_runner` generator. |
+| [`llm_tool_calling_firebase_ai`](llm_tool_calling_firebase_ai) | Adapter for Firebase AI Logic (`firebase_ai`). |
 | [`tool_calling_playground`](tool_calling_playground) | Not published; used to try the generator end to end. |
 
 ## Development
@@ -37,6 +38,14 @@ keys (see the comment at the top of the file for the variables):
 
 ```sh
 cd tool_calling_playground && dart run bin/provider_check.dart
+```
+
+`llm_tool_calling_firebase_ai` is a Flutter package and is **not** part of
+the workspace: Flutter's `flutter_test` pins a `test_api` version that
+conflicts with the generator's `analyzer`. Work on it on its own:
+
+```sh
+cd llm_tool_calling_firebase_ai && flutter pub get && flutter test
 ```
 
 Publish `llm_tool_calling` before `llm_tool_calling_generator`, which depends

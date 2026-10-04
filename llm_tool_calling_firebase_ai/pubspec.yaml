@@ -1,0 +1,24 @@
+name: llm_tool_calling_firebase_ai
+description: Use llm_tool_calling tools with Firebase AI Logic (firebase_ai). Turns generated tools into Gemini function declarations, with automatic function calling.
+version: 0.1.0
+repository: https://github.com/amitgp853/llm_tool_calling/tree/main/llm_tool_calling_firebase_ai
+issue_tracker: https://github.com/amitgp853/llm_tool_calling/issues
+topics:
+  - llm
+  - tool-calling
+  - function-calling
+  - firebase
+  - gemini
+
+environment:
+  sdk: ^3.11.0
+
+dependencies:
+  firebase_ai: ^4.0.0
+  llm_tool_calling: ^0.3.0
+
+dev_dependencies:
+  firebase_core: ^4.15.0
+  flutter_test:
+    sdk: flutter
+  lints: ^6.0.0

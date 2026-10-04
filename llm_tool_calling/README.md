@@ -149,7 +149,15 @@ try {
 }
 ```
 
-Ready-made adapters for popular SDKs are on the [roadmap](#roadmap).
+## Use with your SDK
+
+Adapter packages turn `allTools` into your SDK's tool objects, including
+validation and confirmation handling:
+
+| You use | Add | Then |
+|---|---|---|
+| Firebase AI Logic ([`firebase_ai`](https://pub.dev/packages/firebase_ai)) | [`llm_tool_calling_firebase_ai`](https://pub.dev/packages/llm_tool_calling_firebase_ai) | `tools: [allTools.toFirebaseAiTool()]` |
+| [`llm_sdk`](https://pub.dev/packages/llm_sdk), [`flutter_ai_tools`](https://pub.dev/packages/flutter_ai_tools) | Coming soon | See [Sending tools to your LLM](#sending-tools-to-your-llm) meanwhile |
 
 ## Compatibility
 
@@ -364,8 +372,8 @@ All of them write into the same shared `.g.dart` part.
 
 ## Roadmap
 
-- Ready-made tool objects and schemas for popular SDKs such as `llm_sdk`,
-  `flutter_ai_tools` and `firebase_ai`.
+- Adapters for `llm_sdk` and `flutter_ai_tools` (the `firebase_ai` adapter
+  is available).
 - `llm_tool_calling_flutter`: an approval widget for
   `requiresConfirmation` tools.
 
@@ -375,6 +383,7 @@ All of them write into the same shared `.g.dart` part.
 |---|---|---|
 | [`llm_tool_calling`](https://pub.dev/packages/llm_tool_calling) | Annotations, `ToolDefinition`, validation | dependency |
 | [`llm_tool_calling_generator`](https://pub.dev/packages/llm_tool_calling_generator) | The `build_runner` code generator | dev dependency |
+| [`llm_tool_calling_firebase_ai`](https://pub.dev/packages/llm_tool_calling_firebase_ai) | Adapter for Firebase AI Logic (`firebase_ai`) | dependency |
 
 ## Author
 
