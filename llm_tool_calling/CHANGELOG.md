@@ -1,3 +1,7 @@
+## 0.6.1
+
+- Added the package homepage (https://amitgp.dev).
+
 ## 0.6.0
 
 - Built-in support for every major SDK, with no extra packages:

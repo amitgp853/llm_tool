@@ -1,3 +1,7 @@
+## 0.6.1
+
+- Added the package homepage (https://amitgp.dev).
+
 ## 0.6.0
 
 - No changes in the generated code. Requires `llm_tool_calling` 0.6.0, which
