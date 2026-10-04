@@ -1,3 +1,8 @@
+## 0.1.1
+
+- Works with `llm_tool_calling` 0.5.x (and still 0.3.x and 0.4.x).
+- Clearer package description: the adapter runs the whole tool loop.
+
 ## 0.1.0
 
 - Initial release.

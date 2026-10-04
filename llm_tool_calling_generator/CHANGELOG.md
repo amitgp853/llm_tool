@@ -1,4 +1,4 @@
-## Unreleased
+## 0.5.0
 
 - Supports `@Param(name: ...)`: the schema, `required` and validation use the
   JSON name, while your function is still called with its Dart parameter
