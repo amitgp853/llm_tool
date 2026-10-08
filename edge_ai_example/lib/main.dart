@@ -1,7 +1,8 @@
 // On-device tool calling: llm_tool tools, run by Gemma 4 E2B through
 // flutter_edge_ai. Nothing leaves the phone after the model download.
 import 'package:flutter/material.dart';
-// Prefixed: flutter_edge_ai's Tool clashes with llm_tool's deprecated @Tool.
+// Prefixed, as the llm_tool README suggests for SDKs: it shows which names
+// (Tool, Message...) come from flutter_edge_ai.
 import 'package:flutter_edge_ai/flutter_edge_ai.dart' as edge;
 import 'package:flutter_edge_ai_litertlm/flutter_edge_ai_litertlm.dart';
 import 'package:llm_tool/llm_tool.dart';
