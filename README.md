@@ -22,6 +22,7 @@ argument validation and type-safe dispatch.
 | [`llm_tool_firebase_ai`](llm_tool_firebase_ai) | Adapter for Firebase AI Logic (`firebase_ai`). |
 | [`tool_calling_playground`](tool_calling_playground) | Not published; used to try the generator end to end. |
 | [`firebase_live_check`](firebase_live_check) | Not published; a Flutter web app that checks the firebase_ai adapter against real Gemini. |
+| [`edge_ai_example`](edge_ai_example) | Not published; a Flutter app that runs tools on-device with Gemma 4 via `flutter_edge_ai`. |
 
 ## Development
 

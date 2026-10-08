@@ -326,6 +326,65 @@ Future<void> main() async {
 }
 ```
 
+### On-device (flutter_edge_ai)
+
+With [`flutter_edge_ai`](https://pub.dev/packages/flutter_edge_ai) and
+[`flutter_edge_ai_litertlm`](https://pub.dev/packages/flutter_edge_ai_litertlm),
+the model runs on the phone. Pass the schemas as its `Tool`s, and let
+`generateChatResponseWithTools` run the loop: it calls `onToolCall` for each
+tool call and sends the map you return back to the model.
+
+```dart
+import 'package:flutter_edge_ai/flutter_edge_ai.dart' as edge;
+import 'package:llm_tool/llm_tool.dart';
+
+import 'tools.dart'; // your @LlmTool functions and the generated allTools
+
+// After FlutterEdgeAi.initialize(...) and installing Gemma 4 E2B.
+Future<String> askOnDevice(String question) async {
+  final model = await edge.FlutterEdgeAi.getActiveModel(maxTokens: 4096);
+  final chat = await model.createChat(
+    modelType: edge.ModelType.gemma4, // match the installed model
+    supportsFunctionCalls: true,
+    tools: [
+      for (final tool in allTools)
+        edge.Tool(
+          name: tool.name,
+          description: tool.description,
+          parameters: tool.parametersSchema,
+        ),
+    ],
+  );
+  await chat.addQueryChunk(edge.Message.text(text: question, isUser: true));
+
+  final answer = StringBuffer();
+  await for (final response in chat.generateChatResponseWithTools(
+    onToolCall: (call) async =>
+        (await allTools.invoke(call.name, call.args)).toJson(),
+  )) {
+    if (response is edge.TextResponse) answer.write(response.token);
+  }
+  return answer.toString();
+}
+```
+
+`toJson()` sends failures as `{"error": "..."}`, the shape flutter_edge_ai
+expects for a failed tool. Pass `confirm:` to `invoke` as usual for tools
+that need confirmation. A complete Flutter app, with a toolset and a
+confirmation dialog, is in
+[`edge_ai_example`](https://github.com/amitgp853/llm_tool/tree/main/edge_ai_example).
+
+Small models have less room and less skill than cloud models, so:
+
+- **Send only the tools the screen needs.** Every tool's schema is part of
+  every prompt; a typical tool costs 40 to 120 tokens.
+- **Keep descriptions short and concrete**, with an example value
+  (`'e.g. USD'`). Small models follow examples better than a `pattern`.
+- **Prefer flat parameters** to deeply nested classes.
+- **Don't name a parameter** `type`, `description`, `properties`,
+  `required` or `nullable` for FunctionGemma: its prompt format skips those
+  names. Rename it with `@Param('...', name: '...')`.
+
 ### Any other SDK, or plain HTTP
 
 Send the JSON from the table above in your request (most SDKs can build
@@ -367,6 +426,7 @@ work with:
 | **Mistral** | `toOpenAIJson()` | JSON string | Same shape as OpenAI. |
 | **Ollama** (local models) | `toOpenAIJson()` | Object | How well the model fills nested objects depends on the model. |
 | Other OpenAI-compatible APIs (DeepSeek, Groq, xAI…) | `toOpenAIJson()` | Usually a JSON string | Same request shape as OpenAI. |
+| **On-device** via [flutter_edge_ai](#on-device-flutter_edge_ai) | `edge.Tool(..., parameters: tool.parametersSchema)` | Object (`call.args`) | Function calling: Gemma 4 E2B/E4B, Qwen3 0.6B, Qwen 2.5, FunctionGemma 270M, DeepSeek R1, Phi-4 Mini. Built-in OS models (Gemini Nano, Apple Foundation Models) put the schema in the prompt as text, so short, clear schemas matter more there. FunctionGemma ignores limits (`minimum`, `pattern`...), but `invoke` still enforces them. Small models may need fewer tools and flatter parameters. |
 
 Some SDKs still send schemas to Gemini in the older `parameters` field. If
 yours does, pass `withoutAdditionalProperties(tool.parametersSchema)`

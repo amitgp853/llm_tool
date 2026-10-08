@@ -1,0 +1,24 @@
+name: edge_ai_example
+description: "On-device tool calling with llm_tool and flutter_edge_ai (not published)."
+publish_to: 'none'
+version: 0.1.0+1
+
+environment:
+  sdk: ^3.13.4
+
+dependencies:
+  flutter:
+    sdk: flutter
+  flutter_edge_ai: ^2.1.0
+  flutter_edge_ai_litertlm: ^1.9.0
+  llm_tool: ^0.8.0
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^6.0.0
+  llm_tool_generator: ^0.8.0
+  build_runner: ^2.16.2
+
+flutter:
+  uses-material-design: true

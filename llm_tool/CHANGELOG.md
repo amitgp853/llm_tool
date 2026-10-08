@@ -1,3 +1,13 @@
+## Unreleased
+
+- README: new "On-device (flutter_edge_ai)" section and Compatibility row.
+  Tools run with Gemma 4, Qwen3 and other on-device models through
+  `flutter_edge_ai`: pass `parametersSchema` as its `Tool` parameters and
+  return `invoke(...).toJson()` from `onToolCall`. The new
+  `edge_ai_example` app in the repository shows a toolset and a
+  confirmation dialog. No code changes; `llm_tool` does not depend on
+  `flutter_edge_ai`.
+
 ## 0.8.0
 
 - **Toolsets: tools as class methods.** Mark a class with `@LlmToolset()`
