@@ -123,13 +123,6 @@ void main() {
     });
   });
 
-  test('the deprecated toOpenAiJson names still work until 1.0', () {
-    // ignore: deprecated_member_use_from_same_package
-    expect(_tool.toOpenAiJson(), _tool.toOpenAIJson());
-    // ignore: deprecated_member_use_from_same_package
-    expect([_tool].toOpenAiResponsesJson(), [_tool].toOpenAIResponsesJson());
-  });
-
   test('lists keep the order of the tools', () {
     final other = ToolDefinition(
       name: 'other',

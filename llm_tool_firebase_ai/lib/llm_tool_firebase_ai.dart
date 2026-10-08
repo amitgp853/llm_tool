@@ -13,9 +13,8 @@
 library;
 
 // So users need only this import and firebase_ai's. The annotations are left
-// out (put @LlmTool functions in their own file); the deprecated `Tool` alias
-// would clash with firebase_ai's `Tool` class.
-export 'package:llm_tool/llm_tool.dart' hide LlmTool, LlmToolset, Param, Tool;
+// out: they belong in the file with your @LlmTool functions.
+export 'package:llm_tool/llm_tool.dart' hide LlmTool, LlmToolset, Param;
 
 export 'src/extensions.dart';
 export 'src/json_schema.dart' show toFirebaseJsonSchema;

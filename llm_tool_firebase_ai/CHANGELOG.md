@@ -1,3 +1,10 @@
+## 0.5.0
+
+- Removed `toFirebaseAiTool()`, deprecated in 0.3.0; use
+  `toFirebaseAITool()`.
+- The duplicate-name error now suggests `@LlmTool(name: ...)`.
+- Requires `llm_tool` 1.0.0.
+
 ## 0.4.0
 
 - Sends `@Param` limits from `llm_tool` 0.8.0: `minimum`, `maximum`,

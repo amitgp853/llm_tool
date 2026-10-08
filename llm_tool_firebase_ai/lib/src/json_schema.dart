@@ -1,6 +1,6 @@
 import 'package:firebase_ai/firebase_ai.dart';
 // firebase_ai has its own Tool class; ours is the annotation, not needed here.
-import 'package:llm_tool/llm_tool.dart' hide Tool;
+import 'package:llm_tool/llm_tool.dart';
 
 /// Converts a JSON Schema map, as in [ToolDefinition.parametersSchema], to
 /// firebase_ai's [JSONSchema].

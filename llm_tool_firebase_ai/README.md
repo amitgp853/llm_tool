@@ -190,13 +190,10 @@ the other error paths are covered by the package's unit tests. The check app is
   App Check is enforced for Firebase AI Logic in your project, set App Check
   up in your app, or requests fail with *"Firebase App Check token is
   invalid"*.
-- **`Tool` name clash:** firebase_ai has a class called `Tool`. Until
-  1.0.0, llm_tool still has `Tool` too, as a deprecated alias of
-  `@LlmTool`. Keep your `@LlmTool()` functions in their own file (e.g.
-  `tools.dart`), and in the file that creates the model import only
-  firebase_ai and this adapter, as shown above: the adapter leaves out the
-  annotations. If a file must import both packages, use
-  `import 'package:llm_tool/llm_tool.dart' hide Tool;`.
+- **Imports:** in the file that creates the model, import only
+  firebase_ai and this adapter, as shown above. The adapter re-exports
+  llm_tool without the annotations, which belong in the file with your
+  `@LlmTool()` functions (e.g. `tools.dart`).
 - **Unique names:** all tools passed together must have different names
   (e.g. when combining `allTools` from several files); otherwise the adapter
   throws an `ArgumentError` naming the duplicate, instead of firebase_ai

@@ -34,14 +34,6 @@ extension ToolDefinitionFormats on ToolDefinition {
     'strict': false,
   };
 
-  /// Renamed to [toOpenAIJson].
-  @Deprecated('Use toOpenAIJson(). Will be removed in 1.0.0.')
-  Map<String, Object?> toOpenAiJson() => toOpenAIJson();
-
-  /// Renamed to [toOpenAIResponsesJson].
-  @Deprecated('Use toOpenAIResponsesJson(). Will be removed in 1.0.0.')
-  Map<String, Object?> toOpenAiResponsesJson() => toOpenAIResponsesJson();
-
   /// Anthropic (Claude) Messages API: `{"name", "description",
   /// "input_schema"}`.
   Map<String, Object?> toAnthropicJson() => {
@@ -80,14 +72,6 @@ extension ToolListFormats on Iterable<ToolDefinition> {
   /// See [ToolDefinitionFormats.toOpenAIResponsesJson].
   List<Map<String, Object?>> toOpenAIResponsesJson() =>
       _unique([for (final tool in this) tool.toOpenAIResponsesJson()]);
-
-  /// Renamed to [toOpenAIJson].
-  @Deprecated('Use toOpenAIJson(). Will be removed in 1.0.0.')
-  List<Map<String, Object?>> toOpenAiJson() => toOpenAIJson();
-
-  /// Renamed to [toOpenAIResponsesJson].
-  @Deprecated('Use toOpenAIResponsesJson(). Will be removed in 1.0.0.')
-  List<Map<String, Object?>> toOpenAiResponsesJson() => toOpenAIResponsesJson();
 
   /// See [ToolDefinitionFormats.toAnthropicJson].
   List<Map<String, Object?>> toAnthropicJson() =>
@@ -150,7 +134,7 @@ extension ToolListFormats on Iterable<ToolDefinition> {
       if (!seen.add(tool.name)) {
         throw ArgumentError(
           'Two tools are named "${tool.name}". Tool names must be unique; '
-          'rename one with @Tool(name: ...).',
+          'rename one with @LlmTool(name: ...).',
         );
       }
     }

@@ -1,6 +1,6 @@
 // Using llm_tool with Firebase AI Logic.
 //
-// In a real app, write the tools as @Tool() functions and let
+// In a real app, write the tools as @LlmTool() functions and let
 // llm_tool_generator create `allTools` for you (see the
 // llm_tool README). A hand-written tool is used here so the example
 // runs without code generation.

@@ -177,9 +177,8 @@ read and fix.
 > imported; importing your `tools.dart` isn't enough.
 >
 > **Import SDKs with a prefix** (`as openai`, `as anthropic`, `as mcp`):
-> most AI SDKs have a class called `Tool`, which clashes with this
-> package's deprecated `@Tool` alias until 1.0.0, and Anthropic's SDK has
-> a `ToolDefinition` too.
+> Anthropic's SDK has a `ToolDefinition` too, and the prefix makes it
+> clear which names come from the SDK.
 
 ### OpenAI
 
@@ -764,10 +763,7 @@ To test what a tool *does*, call it like a function:
 **Using `json_serializable` or `freezed` in the same file?** That's fine.
 All of them write into the same shared `.g.dart` part.
 
-## Roadmap
-
-- **1.0.0:** a stable API. The deprecated names (`@Tool`, `toOpenAiJson`,
-  `toOpenAiResponsesJson`) are removed; everything else stays as it is.
+## Feedback
 
 Missing something? [Open an issue](https://github.com/amitgp853/llm_tool/issues)
 and tell me what you're building.

@@ -1,4 +1,16 @@
-## Unreleased
+## 1.0.0
+
+**A stable API.** From here on, breaking changes only come with a new
+major version. The only breaking change is the removal of the names
+deprecated in 0.7.0:
+
+- Removed `@Tool()`; use `@LlmTool()`.
+- Removed `toOpenAiJson()` and `toOpenAiResponsesJson()`; use
+  `toOpenAIJson()` and `toOpenAIResponsesJson()`.
+- The duplicate-name error now suggests `@LlmTool(name: ...)`.
+
+To upgrade from 0.8.0: fix the deprecation hints your IDE shows, then
+update to 1.0.0. Code without deprecation hints needs no changes.
 
 - README: new "On-device (flutter_edge_ai)" section and Compatibility row.
   Tools run with Gemma 4, Qwen3 and other on-device models through

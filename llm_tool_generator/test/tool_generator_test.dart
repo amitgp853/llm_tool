@@ -28,16 +28,6 @@ void main() {
     );
   });
 
-  test('the deprecated @Tool() still works until 1.0', () async {
-    final output = await _generate('''
-/// Doc.
-// ignore: deprecated_member_use
-@Tool()
-void f(String a) {}
-''');
-    expect(output, contains('final fTool = ToolDefinition('));
-  });
-
   group('schema', () {
     test('matches the full expected output for a typical tool', () async {
       final output = await _generate('''
@@ -1491,7 +1481,7 @@ Future<void> f() async {}
     });
   });
 
-  group('@Tool options', () {
+  group('@LlmTool options', () {
     test('custom name is used, variable keeps the function name', () async {
       final output = await _generate('''
 /// Doc.
@@ -1614,7 +1604,7 @@ void f() {}
   });
 
   group('errors', () {
-    test('@Tool on a class', () async {
+    test('@LlmTool on a class', () async {
       expect(
         await _buildErrors('''
 /// Doc.
@@ -1628,7 +1618,7 @@ class NotAFunction {}
       );
     });
 
-    test('@Tool on a top-level variable', () async {
+    test('@LlmTool on a top-level variable', () async {
       expect(
         await _buildErrors('''
 /// Doc.
@@ -1666,7 +1656,7 @@ final notAFunction = 1;
         'Move it to an @LlmToolset class',
       ),
     ]) {
-      test('@Tool on a $kind without @LlmToolset is an error', () async {
+      test('@LlmTool on a $kind without @LlmToolset is an error', () async {
         expect(
           await _buildErrors('/// Doc.\n@LlmTool()\nvoid f() {}\n\n$container'),
           allOf(contains('"C.m" is a method'), contains(fix)),
@@ -1675,7 +1665,7 @@ final notAFunction = 1;
     }
 
     test(
-      'known limitation: a file with only @Tool methods is skipped',
+      'known limitation: a file with only @LlmTool methods is skipped',
       () async {
         // Catching this would mean resolving every file in the user's package
         // on every build. Documented in the README instead.
@@ -1839,7 +1829,7 @@ void f($type x) {}
   });
 }
 
-/// Source of the real llm_tool package, so `@Tool` resolves.
+/// Source of the real llm_tool package, so `@LlmTool` resolves.
 late Map<String, String> _runtimeSources;
 
 Future<void> _loadRuntimeSources() async {

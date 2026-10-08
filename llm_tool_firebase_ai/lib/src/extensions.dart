@@ -1,6 +1,6 @@
 import 'package:firebase_ai/firebase_ai.dart';
 // firebase_ai has its own Tool class; ours is the annotation, not needed here.
-import 'package:llm_tool/llm_tool.dart' hide Tool;
+import 'package:llm_tool/llm_tool.dart';
 
 import 'json_schema.dart';
 
@@ -62,11 +62,6 @@ extension ToolListFirebaseAI on Iterable<ToolDefinition> {
     ]);
   }
 
-  /// Renamed to [toFirebaseAITool].
-  @Deprecated('Use toFirebaseAITool(). Will be removed in 1.0.0.')
-  Tool toFirebaseAiTool({ToolConfirmation? confirm}) =>
-      toFirebaseAITool(confirm: confirm);
-
   /// Declarations for manual function calling, e.g.
   /// `Tool.functionDeclarations(allTools.toFunctionDeclarations())`.
   ///
@@ -98,7 +93,7 @@ extension ToolListFirebaseAI on Iterable<ToolDefinition> {
       if (!seen.add(tool.name)) {
         throw ArgumentError(
           'Two tools are named "${tool.name}". Tool names must be unique; '
-          'rename one with @Tool(name: ...).',
+          'rename one with @LlmTool(name: ...).',
         );
       }
     }

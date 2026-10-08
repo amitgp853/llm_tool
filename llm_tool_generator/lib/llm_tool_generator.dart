@@ -10,7 +10,7 @@ import 'package:source_gen/source_gen.dart';
 
 import 'src/tool_generator.dart';
 
-/// Creates the builder that turns `@Tool()` functions into `ToolDefinition`s
+/// Creates the builder that turns `@LlmTool()` functions into `ToolDefinition`s
 /// in each library's shared `.g.dart` part. Referenced from `build.yaml`.
 Builder toolBuilder(BuilderOptions options) =>
     SharedPartBuilder([ToolGenerator()], 'llm_tool');

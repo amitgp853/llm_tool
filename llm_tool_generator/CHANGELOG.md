@@ -1,3 +1,11 @@
+## 1.0.0
+
+- Stable, together with `llm_tool` 1.0.0. The generated code is the same
+  as in 0.8.0.
+- The deprecated `@Tool()` is gone from `llm_tool`, so it no longer
+  generates tools; use `@LlmTool()`.
+- Requires `llm_tool` 1.0.0.
+
 ## 0.8.0
 
 - Generates toolsets: for each `@LlmToolset()` class, an extension with an

@@ -37,14 +37,6 @@ class LlmTool {
   });
 }
 
-/// The previous name of [LlmTool]; works the same.
-///
-/// Renamed because almost every AI SDK (firebase_ai, openai_dart,
-/// anthropic_sdk_dart, mcp_dart) also has a class called `Tool`, which
-/// clashes in files that import both.
-@Deprecated('Use @LlmTool() instead. Tool will be removed in 1.0.0.')
-typedef Tool = LlmTool;
-
 /// Marks a class whose `@LlmTool` methods are tools, e.g. tools that need
 /// a service, a repository or other state.
 ///

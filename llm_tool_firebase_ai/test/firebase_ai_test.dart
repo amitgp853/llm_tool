@@ -301,13 +301,6 @@ void main() {
     });
   });
 
-  test('the deprecated toFirebaseAiTool still works until 1.0', () {
-    final tool = [
-      _tool(name: 'one'),
-    ].toFirebaseAiTool(); // ignore: deprecated_member_use, deprecated_member_use_from_same_package
-    expect(tool.autoFunctionDeclarations.single.name, 'one');
-  });
-
   group('duplicate tool names', () {
     final tools = [_tool(name: 'getWeather'), _tool(name: 'getWeather')];
     final error = throwsA(
@@ -315,7 +308,7 @@ void main() {
         (e) => e.message,
         'message',
         'Two tools are named "getWeather". Tool names must be unique; '
-            'rename one with @Tool(name: ...).',
+            'rename one with @LlmTool(name: ...).',
       ),
     );
 

@@ -18,7 +18,7 @@ final _toolsetChecker = TypeChecker.typeNamed(
   inPackage: 'llm_tool',
 );
 
-/// Also handles the deprecated `@Tool()`, which is the same class.
+/// Generates a [ToolDefinition] for every `@LlmTool()` function and method.
 class ToolGenerator extends GeneratorForAnnotation<LlmTool> {
   ToolGenerator() : super(inPackage: 'llm_tool');
 

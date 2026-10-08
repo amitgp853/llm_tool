@@ -190,7 +190,10 @@ void main() {
         isA<ArgumentError>().having(
           (e) => e.message,
           'message',
-          contains('Two tools are named "getWeather"'),
+          allOf(
+            contains('Two tools are named "getWeather"'),
+            contains('rename one with @LlmTool(name: ...)'),
+          ),
         ),
       );
       expect(() => duplicates.invoke('getWeather', {}), error);
