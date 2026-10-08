@@ -1,3 +1,10 @@
+## 1.0.1
+
+- README and pub.dev description: on-device models (Gemma 4, Qwen3 and
+  others through `flutter_edge_ai`) are now listed with the other
+  providers, linking to the "On-device (flutter_edge_ai)" section. Topic
+  `on-device-ai` replaces `codegen`. No code changes.
+
 ## 1.0.0
 
 **A stable API.** From here on, breaking changes only come with a new

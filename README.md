@@ -1,6 +1,6 @@
 # llm_tool
 
-Turn any Dart function into an LLM tool with one annotation. Works with OpenAI, Claude, Gemini and MCP. No hand-written JSON schemas.
+Turn any Dart function into an LLM tool with one annotation. Works with OpenAI, Claude, Gemini, MCP and on-device models. No hand-written JSON schemas.
 
 ```dart
 /// Gets the current weather for a city.

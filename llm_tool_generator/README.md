@@ -7,7 +7,8 @@ For every `@LlmTool()` function it generates a `ToolDefinition` with the JSON
 Schema for the LLM, argument validation and type-safe dispatch.
 
 The full documentation, including supported types, limits, validation and
-errors, and how to send tools to OpenAI, Claude, Gemini or MCP, is in the
+errors, and how to send tools to OpenAI, Claude, Gemini, MCP or on-device
+models, is in the
 [`llm_tool` README](https://pub.dev/packages/llm_tool).
 
 ## Quick start

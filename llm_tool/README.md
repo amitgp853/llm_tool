@@ -1,7 +1,8 @@
 # llm_tool
 
 **Turn any Dart function into an LLM tool with one annotation. Works with
-OpenAI, Claude, Gemini and MCP. No hand-written JSON schemas.**
+OpenAI, Claude, Gemini, MCP and on-device models. No hand-written JSON
+schemas.**
 
 ```dart
 /// Gets the current weather for a city.
@@ -18,7 +19,9 @@ validation and the call into your function are generated for you.
   of truth. Rename a parameter or add one, and the schema follows on the
   next build, instead of silently drifting out of sync.
 - **One package for every provider.** OpenAI, Claude, Gemini, MCP and
-  OpenAI-compatible APIs (Mistral, Groq, DeepSeek, Ollama...) are built in.
+  OpenAI-compatible APIs (Mistral, Groq, DeepSeek, Ollama...) are built in,
+  and so are [on-device models](#on-device-flutter_edge_ai) like Gemma 4
+  and Qwen3 through flutter_edge_ai, with no network after the download.
   No extra package per SDK, and no runtime dependencies at all: it runs on
   every platform, including web.
 - **Validation that helps the model.** Wrong arguments never reach your
@@ -163,6 +166,7 @@ Everything is built into this package; you don't add anything per SDK.
 | `allTools.toAnthropicJson()` | Anthropic (Claude) |
 | `allTools.toGeminiJson()` | Gemini (as `parametersJsonSchema`) |
 | `allTools.toMcpJson()` | Model Context Protocol servers |
+| `parametersSchema` as flutter_edge_ai's `Tool` | [On-device models](#on-device-flutter_edge_ai) (Gemma 4, Qwen3...) |
 | `allTools.invoke(name, arguments)` | Running the model's call: validates, asks for confirmation, runs, and never throws |
 
 `invoke` takes the arguments as a map, or as a JSON string (how OpenAI sends

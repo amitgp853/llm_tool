@@ -1,3 +1,8 @@
+## 1.0.1
+
+- README and pub.dev description mention on-device models. No code
+  changes.
+
 ## 1.0.0
 
 - Stable, together with `llm_tool` 1.0.0. The generated code is the same
